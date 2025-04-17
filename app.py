@@ -19,6 +19,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'NVD_CVE_Secret_Key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cve_database.db'
 
+# Define the static folder explicitly to ensure CSS files are served correctly
+app.static_folder = 'static'
+
 # Add the current year to all templates
 @app.context_processor
 def inject_now():
@@ -380,6 +383,25 @@ def view_all_entries():
         if CVE_Model is None:
              return render_template('error.html', error="Database model not initialized. Please update the database first.")
 
+        # Calculate severity counts (same logic as in index function)
+        severity_query = session.query(
+            CVE_Model.severity, func.count(CVE_Model.id)
+        ).group_by(CVE_Model.severity).all()
+
+        # Convert to dict, handling None severity
+        severity_map = {
+            "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0
+        }
+        for severity, count in severity_query:
+            s_upper = (severity or 'UNKNOWN').upper() # Treat None as UNKNOWN
+            if s_upper in severity_map:
+                severity_map[s_upper] = count
+            else: # Catch any unexpected values
+                severity_map["UNKNOWN"] += count
+        
+        severity_counts = severity_map
+        total_cve_count = sum(severity_counts.values()) # Calculate total count
+
         query = session.query(CVE_Model)
 
         # Define severity order for sorting
@@ -401,7 +423,6 @@ def view_all_entries():
         else: # Default: published_desc
             query = query.order_by(CVE_Model.published_date.desc())
 
-
         # Consider adding pagination for large datasets later
         results = query.all()
 
@@ -411,7 +432,9 @@ def view_all_entries():
                               search_term='All Database Entries',
                               search_performed=True, # Flag to show the results section
                               sort_by=sort_by, # Pass current sort order
-                              is_view_all=True) # Flag to distinguish from search
+                              is_view_all=True, # Flag to distinguish from search
+                              severity_counts=severity_counts, # Add severity counts
+                              total_cve_count=total_cve_count) # Add total count
 
     except Exception as e:
         logging.error(f"Error fetching all entries: {e}")

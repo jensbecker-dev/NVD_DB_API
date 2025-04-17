@@ -1,232 +1,364 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVD CVE Database Explorer</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+        }
+        body {
+            min-height: 100vh;
+            padding-top: 56px;
+            padding-left: var(--sidebar-width);
+        }
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: var(--sidebar-width);
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            z-index: 1000;
+            border-right: 1px solid #dee2e6;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .badge-critical { background-color: #dc3545; }
+        .badge-high { background-color: #fd7e14; }
+        .badge-medium { background-color: #ffc107; color: #000; }
+        .badge-low { background-color: #0dcaf0; }
+        .badge-unknown { background-color: #6c757d; }
+        .cve-table th, .cve-table td {
+            vertical-align: middle;
+        }
+        .severity-stats .card {
+            transition: transform 0.2s;
+        }
+        .severity-stats .card:hover {
+            transform: scale(1.03);
+        }
+        @media (max-width: 768px) {
+            body {
+                padding-left: 0;
+            }
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-shield-lock"></i> NVD CVE Explorer
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('view_all_entries') }}">All CVEs</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownReports" role="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Summary Reports
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownReports">
+                            <li><a class="dropdown-item" href="#">Monthly Summary</a></li>
+                            <li><a class="dropdown-item" href="#">Severity Distribution</a></li>
+                            <li><a class="dropdown-item" href="#">Vendor Analysis</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('update_database') }}">Update Database</a>
+                    </li>
+                </ul>
+                <form class="d-flex" method="POST" action="{{ url_for('index') }}">
+                    <input class="form-control me-2" type="search" name="search_term" placeholder="Quick search..." 
+                            value="{{ search_term }}" aria-label="Search">
+                    <button class="btn btn-outline-light" type="submit">Search</button>
+                </form>
+            </div>
+        </div>
+    </nav>
 
-{% block title %}NVD CVE Database API - Home{% endblock %}
-
-{% block content %}
-<div class="header-section">
-    <h1 class="display-4 text-dark">NVD CVE Database API</h1>
-    <p class="lead text-dark">A tool for security professionals to access vulnerability information</p>
-</div>
-
-<!-- Display Error Message -->
-{% if error_message %}
-<div class="alert alert-danger text-white" role="alert">
-    {{ error_message }}
-</div>
-{% endif %}
-
-<!-- Severity Overview Section -->
-{% if severity_counts %}
-<div class="severity-overview card shadow-sm mb-4">
-    <div class="card-header bg-dark">
-        <h2 class="h4 mb-0 text-white">Database Overview</h2>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="px-3 mb-3">
+            <h5>Vulnerability Categories</h5>
+        </div>
+        <div class="list-group list-group-flush px-3">
+            <a href="#" class="list-group-item list-group-item-action">SQL Injection</a>
+            <a href="#" class="list-group-item list-group-item-action">Remote Code Execution</a>
+            <a href="#" class="list-group-item list-group-item-action">Cross-Site Scripting (XSS)</a>
+            <a href="#" class="list-group-item list-group-item-action">Authentication Bypass</a>
+            <a href="#" class="list-group-item list-group-item-action">Denial of Service</a>
+            <a href="#" class="list-group-item list-group-item-action">Information Disclosure</a>
+            <a href="#" class="list-group-item list-group-item-action">Buffer Overflow</a>
+        </div>
+        
+        <div class="px-3 mt-4 mb-3">
+            <h5>Top Vendors</h5>
+        </div>
+        <div class="list-group list-group-flush px-3">
+            <a href="#" class="list-group-item list-group-item-action">Microsoft</a>
+            <a href="#" class="list-group-item list-group-item-action">Adobe</a>
+            <a href="#" class="list-group-item list-group-item-action">Oracle</a>
+            <a href="#" class="list-group-item list-group-item-action">Google</a>
+            <a href="#" class="list-group-item list-group-item-action">Apple</a>
+        </div>
     </div>
-    <div class="card-body bg-light text-dark">
-        <p>Total CVEs currently in the database: <strong>{{ total_cve_count }}</strong></p>
-        <ul class="list-group list-group-flush">
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                Critical
-                <span class="badge fs-6 severity-critical">{{ severity_counts.get('CRITICAL', 0) }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                High
-                <span class="badge fs-6 severity-high">{{ severity_counts.get('HIGH', 0) }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                Medium
-                <span class="badge fs-6 severity-medium">{{ severity_counts.get('MEDIUM', 0) }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                Low
-                <span class="badge fs-6 severity-low">{{ severity_counts.get('LOW', 0) }}</span>
-            </li>
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                Unknown
-                <span class="badge fs-6 severity-unknown">{{ severity_counts.get('UNKNOWN', 0) }}</span>
-            </li>
-            {% if severity_counts.get('INFO', 0) > 0 %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                Info
-                <span class="badge fs-6 severity-info">{{ severity_counts.get('INFO', 0) }}</span>
-            </li>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <!-- Database Overview Section -->
+            <section class="mb-5">
+                <h2 class="mb-4">Database Overview</h2>
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Total CVEs in Database</h5>
+                        <h2 class="display-4 mb-0">{{ total_cve_count }}</h2>
+                    </div>
+                </div>
+                
+                <div class="row severity-stats">
+                    <div class="col-md-4 col-lg mb-3">
+                        <div class="card text-white bg-danger h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Critical</h5>
+                                <h2 class="display-5">{{ severity_counts.get('CRITICAL', 0) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg mb-3">
+                        <div class="card text-white bg-warning h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title text-dark">High</h5>
+                                <h2 class="display-5 text-dark">{{ severity_counts.get('HIGH', 0) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg mb-3">
+                        <div class="card bg-info h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title text-dark">Medium</h5>
+                                <h2 class="display-5 text-dark">{{ severity_counts.get('MEDIUM', 0) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg mb-3">
+                        <div class="card bg-primary text-white h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Low</h5>
+                                <h2 class="display-5">{{ severity_counts.get('LOW', 0) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg mb-3">
+                        <div class="card bg-secondary text-white h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Unknown</h5>
+                                <h2 class="display-5">{{ severity_counts.get('UNKNOWN', 0) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Advanced Search Section -->
+            <section class="mb-5">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h3 class="mb-0">Advanced Search</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('index') }}" class="row g-3">
+                            <div class="col-md-8">
+                                <label for="search_term" class="form-label">Search Term</label>
+                                <input type="text" class="form-control" id="search_term" name="search_term" 
+                                    placeholder="CVE ID, keyword, or vendor name" value="{{ search_term }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="severity" class="form-label">Severity</label>
+                                <select class="form-select" id="severity" name="severity">
+                                    <option value="" selected>Any severity</option>
+                                    <option value="CRITICAL">Critical</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="LOW">Low</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="exploitable" name="exploitable"
+                                        {% if request.args.get('exploitable') == 'true' %}checked{% endif %}>
+                                    <label class="form-check-label" for="exploitable">
+                                        Show potentially exploitable only
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <button type="submit" class="btn btn-primary mt-4">Search</button>
+                                <button type="reset" class="btn btn-secondary mt-4">Reset</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            {% if search_performed %}
+            <section class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Search Results</h2>
+                    {% if results %}
+                    <span class="text-muted">Found {{ results|length }} result{% if results|length != 1 %}s{% endif %}</span>
+                    {% endif %}
+                </div>
+                
+                {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-hover cve-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>CVE ID</th>
+                                <th>Severity</th>
+                                <th>Description</th>
+                                <th>Published</th>
+                                <th>CVSS Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cve in results %}
+                            <tr>
+                                <td><a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}">{{ cve.cve_id }}</a></td>
+                                <td>
+                                    {% if cve.severity == 'CRITICAL' %}
+                                    <span class="badge rounded-pill badge-critical">Critical</span>
+                                    {% elif cve.severity == 'HIGH' %}
+                                    <span class="badge rounded-pill badge-high">High</span>
+                                    {% elif cve.severity == 'MEDIUM' %}
+                                    <span class="badge rounded-pill badge-medium">Medium</span>
+                                    {% elif cve.severity == 'LOW' %}
+                                    <span class="badge rounded-pill badge-low">Low</span>
+                                    {% else %}
+                                    <span class="badge rounded-pill badge-unknown">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ cve.description[:150] }}{% if cve.description|length > 150 %}...{% endif %}</td>
+                                <td>{{ cve.published_date.strftime('%Y-%m-%d') if cve.published_date }}</td>
+                                <td>
+                                    {% if cve.cvss_v3_score %}
+                                    <span class="badge rounded-pill bg-dark">V3: {{ cve.cvss_v3_score }}</span>
+                                    {% elif cve.cvss_v2_score %}
+                                    <span class="badge rounded-pill bg-secondary">V2: {{ cve.cvss_v2_score }}</span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No results found for "{{ search_term }}"
+                </div>
+                {% endif %}
+            </section>
             {% endif %}
-        </ul>
-    </div>
-</div>
-{% endif %}
 
-<!-- Search section -->
-<div class="search-section card shadow-sm mb-4">
-    <div class="card-header bg-dark">
-        <h2 class="h4 mb-0 text-white">Search Vulnerabilities</h2>
-    </div>
-    <div class="card-body bg-light text-dark">
-        <form action="{{ url_for('index') }}" method="post">
-            <div class="mb-3">
-                <label for="search_term" class="form-label">CVE ID or Keyword:</label>
-                <input type="text" id="search_term" name="search_term" class="form-control"
-                       placeholder="e.g., CVE-2021-44228 or log4j" value="{{ search_term if search_term and not is_view_all else '' }}">
-            </div>
-            <div class="search-options">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="exploitable" name="exploitable">
-                    <label class="form-check-label" for="exploitable">
-                        Only show CVEs with known exploits
-                    </label>
+            <!-- Database Actions -->
+            <section class="mb-5">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h3 class="mb-0">Database Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Update Database</h5>
+                                        <p class="card-text">Fetch the latest CVE entries from the National Vulnerability Database.</p>
+                                        <a href="{{ url_for('update_database') }}" class="btn btn-primary">
+                                            <i class="bi bi-arrow-repeat"></i> Update Now
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">View All CVEs</h5>
+                                        <p class="card-text">Browse through all CVE entries currently stored in the database.</p>
+                                        <a href="{{ url_for('view_all_entries') }}" class="btn btn-secondary">
+                                            <i class="bi bi-list-ul"></i> View All
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="d-flex gap-2 mt-3">
-                <button type="submit" class="btn btn-primary">Search</button>
-                <a href="{{ url_for('view_all_entries') }}" class="btn btn-secondary">View All Entries</a>
-            </div>
-        </form>
-    </div>
-</div>
+            </section>
 
-<!-- Alert for no results -->
-{% if not results and search_performed %}
-<div class="alert alert-warning text-dark">
-    <h4 class="alert-heading">No results found</h4>
-    <p><strong>Your search for "{{ search_term }}" returned no results.</strong></p>
-
-    {% if search_term.lower().startswith('cve-') %}
-        <p>If you're searching for a specific CVE ID, please make sure:</p>
-        <ul>
-            <li>The database has been initialized with <a href="{{ url_for('update_database') }}" class="alert-link">Update Database</a></li>
-            <li>The CVE ID format is correct (e.g., CVE-2024-1234)</li>
-        </ul>
-    {% else %}
-        <p>Try different keywords or check if the database has been populated with CVE data.</p>
-        <hr>
-        <p class="mb-0"><a href="{{ url_for('update_database') }}" class="btn btn-warning btn-sm">Update Database</a></p>
-    {% endif %}
-</div>
-{% endif %}
-
-<!-- Search results section -->
-{% if search_performed %}
-<div class="results-section card shadow-sm">
-    <div class="card-header bg-dark">
-        <h2 class="h4 mb-0 text-white">{{ 'All Database Entries' if is_view_all else 'Search Results' }}</h2>
-        {% if not is_view_all and search_term %}
-        <p class="mb-0 text-white">Search term: <strong>{{ search_term }}</strong></p>
-        {% endif %}
-    </div>
-    <div class="card-body bg-light">
-        {% if results %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover table-cve-results">
-                    <thead class="table-dark text-white">
-                        <tr>
-                            <th>CVE ID</th>
-                            <th>Description</th>
-                            <th>CVSS Score</th>
-                            <th>
-                                {% if is_view_all %}
-                                    <a href="{{ url_for('view_all_entries', sort='severity_desc' if sort_by != 'severity_desc' else 'severity_asc') }}" class="text-decoration-none text-white">
-                                        Severity
-                                        {% if sort_by == 'severity_desc' %} <i class="fas fa-sort-down"></i>
-                                        {% elif sort_by == 'severity_asc' %} <i class="fas fa-sort-up"></i>
-                                        {% else %} <i class="fas fa-sort"></i> {% endif %}
-                                    </a>
-                                {% else %}
-                                    Severity
-                                {% endif %}
-                            </th>
-                            <th>
-                                {% if is_view_all %}
-                                    <a href="{{ url_for('view_all_entries', sort='published_desc' if sort_by != 'published_desc' else 'published_asc') }}" class="text-decoration-none text-white">
-                                        Published Date
-                                        {% if sort_by == 'published_desc' %} <i class="fas fa-sort-down"></i>
-                                        {% elif sort_by == 'published_asc' %} <i class="fas fa-sort-up"></i>
-                                        {% else %} <i class="fas fa-sort"></i> {% endif %}
-                                    </a>
-                                {% else %}
-                                    Published Date
-                                {% endif %}
-                            </th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-dark">
-                        {% for cve in results %}
-                        <tr>
-                            <td>{{ cve.cve_id }}</td>
-                            <td>{{ cve.description[:100] }}{% if cve.description|length > 100 %}...{% endif %}</td>
-                            <td>
-                                {% if cve.cvss_v3_score %}
-                                <span class="badge severity-{% if cve.severity %}{{ cve.severity|lower }}{% else %}unknown{% endif %}">
-                                    V3: {{ cve.cvss_v3_score }}
-                                </span>
-                                {% endif %}
-                                {% if cve.cvss_v2_score %}
-                                <span class="badge severity-medium d-block mt-1">
-                                    V2: {{ cve.cvss_v2_score }}
-                                </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge severity-{% if cve.severity %}{{ cve.severity|lower }}{% else %}unknown{% endif %}">
-                                    {{ cve.severity if cve.severity else 'Unknown' }}
-                                </span>
-                            </td>
-                            <td>{{ cve.published_date.strftime('%Y-%m-%d') if cve.published_date else 'N/A' }}</td>
-                            <td>
-                                <a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}" class="btn btn-sm btn-outline-primary">Details</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% elif not error_message %}
-            <p class="text-dark">No CVEs found matching your criteria.</p>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-
-<!-- Features section -->
-{% if not search_performed %}
-<div class="features-section mt-4">
-    <h2 class="h3 mb-4 text-dark">Features</h2>
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card h-100 feature-card shadow-sm">
-                <div class="card-body">
-                    <h3 class="h5 card-title">Local Database</h3>
-                    <p class="card-text">Store vulnerability data locally for fast access and offline use.</p>
-                    <a href="{{ url_for('update_database') }}" class="btn btn-primary mt-2">Update Database</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card h-100 feature-card shadow-sm">
-                <div class="card-body">
-                    <h3 class="h5 card-title">API Integration</h3>
-                    <p class="card-text">Connect to the NVD API for the latest vulnerability information.</p>
-                    <a href="#" class="btn btn-outline-secondary mt-2 disabled">Learn More</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card h-100 feature-card shadow-sm">
-                <div class="card-body">
-                    <h3 class="h5 card-title">Detailed Reports</h3>
-                    <p class="card-text">Get comprehensive information about vulnerabilities including CVSS scores, affected systems, and references.</p>
-                    <a href="#" class="btn btn-outline-secondary mt-2 disabled">Learn More</a>
-                </div>
-            </div>
+            <footer class="text-center text-muted py-4 border-top">
+                <p>&copy; {{ now().year }} NVD CVE Database Explorer</p>
+            </footer>
         </div>
     </div>
-</div>
-{% endif %}
 
-{% endblock %}
-
-{% block scripts %}
-{# Add Font Awesome for sort icons #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js" integrity="sha512-yFjZbTYRCJodnuyGlsKamNE/LlEaVxhXxuLFTR+KzuCLNfUaPj/bNqV0yS+KrK6/NcV4pZ1ckcfUKHS+RBIpQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-{% endblock %}
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+        // Mobile sidebar toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleSidebar = () => {
+                document.querySelector('.sidebar').classList.toggle('show');
+            }
+            
+            // Create toggle button for mobile if it doesn't exist
+            if (window.innerWidth < 768) {
+                if (!document.getElementById('sidebarToggle')) {
+                    const toggle = document.createElement('button');
+                    toggle.id = 'sidebarToggle';
+                    toggle.classList.add('btn', 'btn-sm', 'btn-dark', 'position-fixed');
+                    toggle.style.left = '10px';
+                    toggle.style.bottom = '10px';
+                    toggle.style.zIndex = '1050';
+                    toggle.innerHTML = '<i class="bi bi-list"></i>';
+                    toggle.addEventListener('click', toggleSidebar);
+                    document.body.appendChild(toggle);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
