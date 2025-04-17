@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Database Update Status{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Database Update Status</h1>
+    
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">Update Progress</h2>
+        </div>
+        <div class="card-body">
+            {% if status.is_updating %}
+                <div class="alert alert-info">
+                    <h3 class="h5">Update in Progress</h3>
+                    <p>Please wait while the complete CVE database is being downloaded and updated.</p>
+                    <p>This may take several minutes as we're downloading data from 2002 to present.</p>
+                </div>
+                
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                        role="progressbar" 
+                        style="width: {{ status.progress }}%;" 
+                        aria-valuenow="{{ status.progress }}" 
+                        aria-valuemin="0" 
+                        aria-valuemax="100">
+                        {{ status.progress }}%
+                    </div>
+                </div>
+                
+                {% if status.current_year %}
+                <p>Currently processing year: <strong>{{ status.current_year }}</strong></p>
+                {% endif %}
+                
+                <script>
+                    // Refresh the page every 5 seconds to update status
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 5000);
+                </script>
+            {% else %}
+                {% if status.error %}
+                    <div class="alert alert-danger">
+                        <h3 class="h5">Error Occurred</h3>
+                        <p>{{ status.error }}</p>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success">
+                        <h3 class="h5">Update Complete!</h3>
+                        <p>The CVE database has been successfully updated.</p>
+                        <p>Added <strong>{{ status.cves_added }}</strong> new CVE entries to the database.</p>
+                    </div>
+                {% endif %}
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">Return to Home</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

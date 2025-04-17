@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Search CVEs{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Search Vulnerabilities</h1>
+    
+    <div class="search-form">
+        <h2>Basic Search</h2>
+        <form action="{{ url_for('search') }}" method="post">
+            <div class="form-group">
+                <label for="search_term">CVE ID:</label>
+                <input type="text" id="search_term" name="search_term" placeholder="e.g., CVE-2021-44228" required>
+            </div>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+    
+    <div class="search-tips">
+        <h3>Search Tips</h3>
+        <ul>
+            <li>Enter a CVE ID (e.g., CVE-2021-44228) for specific vulnerability details</li>
+            <li>Search by keyword (e.g., log4j, apache) to find related vulnerabilities</li>
+            <li>Results will show matched vulnerabilities from the local database or the NVD API</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

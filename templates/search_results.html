@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Search Results</h1>
+    <p>Search term: <strong>{{ search_term }}</strong></p>
+    
+    {% if results %}
+        <p>Found {{ results|length }} result(s)</p>
+        
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>CVE ID</th>
+                    <th>Description</th>
+                    <th>CVSS Score</th>
+                    <th>Severity</th>
+                    <th>Published Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cve in results %}
+                <tr>
+                    <td>{{ cve.cve_id }}</td>
+                    <td>{{ cve.description[:100] }}{% if cve.description|length > 100 %}...{% endif %}</td>
+                    <td>
+                        {% if cve.cvss_v3_score %}V3: {{ cve.cvss_v3_score }}{% endif %}
+                        {% if cve.cvss_v2_score %}{% if cve.cvss_v3_score %}<br>{% endif %}V2: {{ cve.cvss_v2_score }}{% endif %}
+                    </td>
+                    <td>{{ cve.severity if cve.severity else 'N/A' }}</td>
+                    <td>{{ cve.published_date if cve.published_date else 'N/A' }}</td>
+                    <td><a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}" class="button">View Details</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-results">
+            <p>No results found for your search.</p>
+            <p>Try different keywords or check for typos in your CVE ID.</p>
+        </div>
+    {% endif %}
+    
+    <a href="{{ url_for('search') }}" class="button">New Search</a>
+</div>
+{% endblock %}

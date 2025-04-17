@@ -1,0 +1,112 @@
+/* style.css */
+
+/* Body and General Layout */
+body {
+    background-color: #f8f9fa; /* Light background for contrast */
+}
+
+/* Card Styling */
+.card {
+    border: none; /* Remove default border for a cleaner look */
+}
+
+.card-header {
+    background-color: #e9ecef; /* Lighter header background */
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Feature Cards */
+.feature-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    height: 100%; /* Ensure cards in a row have the same height */
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Table Styling */
+.table-hover tbody tr:hover {
+    background-color: #e9ecef; /* Subtle hover effect */
+}
+
+.table th {
+    font-weight: 600; /* Slightly bolder table headers */
+}
+
+/* Badge Customization (Severity Colors) */
+/* Ensure high contrast with appropriate text colors on each background */
+.badge.severity-critical {
+    background-color: #dc3545 !important; /* Bootstrap danger red */
+    color: #ffffff !important; /* White text for dark backgrounds */
+    font-weight: bold !important;
+}
+
+.badge.severity-high {
+    background-color: #fd7e14 !important; /* Bootstrap orange */
+    color: #ffffff !important; /* White text for dark backgrounds */
+    font-weight: bold !important;
+}
+
+.badge.severity-medium {
+    background-color: #ffc107 !important; /* Bootstrap warning yellow */
+    color: #000000 !important; /* Black text for light backgrounds */
+    font-weight: bold !important;
+}
+
+.badge.severity-low {
+    background-color: #0dcaf0 !important; /* Bootstrap info cyan */
+    color: #000000 !important; /* Black text for light backgrounds */
+    font-weight: bold !important;
+}
+
+.badge.severity-unknown {
+    background-color: #6c757d !important; /* Bootstrap secondary gray */
+    color: #ffffff !important; /* White text for dark backgrounds */
+    font-weight: bold !important;
+}
+
+.badge.severity-info {
+    background-color: #0d6efd !important; /* Bootstrap primary blue */
+    color: #ffffff !important; /* White text for dark backgrounds */
+    font-weight: bold !important;
+}
+
+/* Ensure text contrast for all contexts */
+.bg-dark, .bg-secondary, .bg-primary, .bg-danger, .bg-warning {
+    color: #ffffff !important; /* Light text on dark backgrounds */
+}
+
+.bg-light, .bg-white, .bg-info {
+    color: #212529 !important; /* Dark text on light backgrounds */
+}
+
+/* CVE Details Page Specifics */
+.cve-header {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.source-tag {
+    font-size: 0.75rem;
+}
+
+/* Footer */
+footer a {
+    text-decoration: none;
+    color: #6c757d;
+}
+
+footer a:hover {
+    text-decoration: underline;
+    color: #000;
+}
+
+/* Responsive Adjustments (Optional) */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2.5rem; /* Adjust heading size on smaller screens */
+    }
+}

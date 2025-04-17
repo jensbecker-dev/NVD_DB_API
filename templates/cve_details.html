@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}CVE Details - {{ cve.cve_id if cve else 'Not Found' }}{% endblock %}
+
+{% block content %}
+{% if cve %}
+    <div class="cve-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <h1 class="h2 text-dark">{{ cve.cve_id }}</h1>
+            {% if from_api %}
+            <span class="badge bg-secondary source-tag text-white">Data from NVD API</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="h5 mb-0">Security Metrics</h3>
+                </div>
+                <div class="card-body bg-light text-dark">
+                    <h4 class="h6">Severity</h4>
+                    <p class="fs-4">
+                        <span class="badge severity-{% if cve.severity %}{{ cve.severity|lower }}{% else %}unknown{% endif %}">
+                            {{ cve.severity if cve.severity else 'Unknown' }}
+                        </span>
+                    </p>
+                    
+                    <h4 class="h6 mt-3">CVSS Scores</h4>
+                    <div>
+                        {% if cve.cvss_v3_score %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>CVSS v3:</span>
+                            <span class="badge severity-{% if cve.severity %}{{ cve.severity|lower }}{% else %}unknown{% endif %}">
+                                {{ cve.cvss_v3_score }}
+                            </span>
+                        </div>
+                        {% else %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>CVSS v3:</span>
+                            <span class="text-muted">N/A</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if cve.cvss_v2_score %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>CVSS v2:</span>
+                            <span class="badge severity-medium">{{ cve.cvss_v2_score }}</span>
+                        </div>
+                        {% else %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>CVSS v2:</span>
+                            <span class="text-muted">N/A</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h4 class="h6 mt-3">Dates</h4>
+                    <div>
+                        <div class="small text-muted mb-1">Published</div>
+                        <div class="mb-2">{{ cve.published_date if cve.published_date else 'Unknown' }}</div>
+                        
+                        <div class="small text-muted mb-1">Last Modified</div>
+                        <div>{{ cve.last_modified_date if cve.last_modified_date else 'Unknown' }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if cve.cwe_id %}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="h5 mb-0">CWE</h3>
+                </div>
+                <div class="card-body bg-light text-dark">
+                    <p>{{ cve.cwe_id }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="h5 mb-0">Description</h3>
+                </div>
+                <div class="card-body bg-light text-dark">
+                    <p>{{ cve.description }}</p>
+                </div>
+            </div>
+            
+            {% if cve.cpe_affected %}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="h5 mb-0">Affected Products</h3>
+                </div>
+                <div class="card-body bg-light text-dark">
+                    <ul class="list-group list-group-flush">
+                        {% if cve.cpe_affected is string %}
+                            {% for cpe in cve.cpe_affected.split(',') %}
+                                {% if cpe %}
+                                <li class="list-group-item">{{ cpe }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {% for cpe in cve.cpe_affected %}
+                                {% if cpe %}
+                                <li class="list-group-item">{{ cpe }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if cve.references %}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="h5 mb-0">References</h3>
+                </div>
+                <div class="card-body bg-light text-dark">
+                    <ul class="list-group list-group-flush">
+                        {% if cve.references is string %}
+                            {% for ref in cve.references.split(',') %}
+                                {% if ref %}
+                                <li class="list-group-item">
+                                    <a href="{{ ref }}" class="text-break" target="_blank" rel="noopener noreferrer">{{ ref }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {% for ref in cve.references %}
+                                {% if ref %}
+                                <li class="list-group-item">
+                                    <a href="{{ ref }}" class="text-break" target="_blank" rel="noopener noreferrer">{{ ref }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back to Search</a>
+    </div>
+{% else %}
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">CVE Not Found</h4>
+        <p>The requested CVE details could not be found.</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back to Search</a>
+{% endif %}
+{% endblock %}
