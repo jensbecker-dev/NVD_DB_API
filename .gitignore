@@ -1,0 +1,18 @@
+# Ignore database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignore specific database files if needed
+# nvd_database.db
+
+# Other common files to ignore
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+*.log
