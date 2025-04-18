@@ -23,29 +23,19 @@ Security professionals often need quick and reliable access to vulnerability dat
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/nvd-db-api.git
+git clone https://github.com/jensbecker-dev/nvd-db-api.git
 cd nvd-db-api
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-## Usage
+#Usage
 
-```python
-from modules.nvdapi import NVDApi
+```bash
 
-# Initialize the API client
-nvd = NVDApi()
+python app.py
 
-# Search for a specific CVE
-cve_details = nvd.get_cve("CVE-2021-44228")
-
-# Search for vulnerabilities affecting a specific product
-apache_vulns = nvd.search_by_product("apache", "log4j")
-
-# Get exploitable vulnerabilities
-exploitable = nvd.get_exploitable()
 ```
 
 ## Documentation
