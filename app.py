@@ -381,7 +381,7 @@ def view_all_entries():
         session = Session()
 
         if CVE_Model is None:
-             return render_template('error.html', error="Database model not initialized. Please update the database first.")
+            return render_template('error.html', error="Database model not initialized. Please update the database first.")
 
         # Calculate severity counts (same logic as in index function)
         severity_query = session.query(
