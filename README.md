@@ -1,7 +1,9 @@
-Collecting workspace information# NVD CVE Database API
+# NVD CVE Database API
 
 ## Overview
-This project provides a Python-based interface for accessing and interacting with the National Vulnerability Database (NVD) CVE data. It aims to simplify security assessments by providing precise information about vulnerabilities, affected systems, and exploit proof of concepts.
+This project provides a Flask-based web application for accessing and interacting with the National Vulnerability Database (NVD) CVE data. It simplifies security assessments by providing precise information about vulnerabilities, affected systems, and exploit proof of concepts through both a web interface and API endpoints.
+
+![Dashboard Screenshot](screenshots/dashboard.png)
 
 ## Purpose
 Security professionals often need quick and reliable access to vulnerability data. This tool streamlines the process of:
@@ -12,18 +14,21 @@ Security professionals often need quick and reliable access to vulnerability dat
 - Facilitating surface-level security scanning
 
 ## Features
-- Simple API for querying the NVD database
-- Detailed vulnerability information retrieval
-- Identification of affected systems and versions
-- Links to available exploit POCs
-- Filtering and search capabilities
-- Export options for reports and integration
+- User-friendly web interface for searching CVE data
+- REST API for programmatic access to vulnerability information
+- Local SQLite database for offline access to CVE information
+- Background database updates from official NVD feeds
+- Detailed vulnerability information with severity ratings
+- Identification of affected systems and versions through CPE data
+- References to available exploit POCs and related resources
+- Filtering capabilities by severity, exploitability, and keywords
+- Dashboard with vulnerability statistics and trends
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/jensbecker-dev/nvd-db-api.git
+git clone https://github.com/yourusername/nvd-db-api.git
 cd nvd-db-api
 
 # Install dependencies
@@ -31,6 +36,26 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+
+### Web Interface
+Start the Flask application and access the web interface:
+
+```bash
+python app.py
+```
+
+Then open a browser and navigate to `http://localhost:8080`
+
+### API Access
+The application provides RESTful API endpoints:
+
+```
+GET /api/cve/<cve_id> - Get details for a specific CVE
+GET /db_status - Check database status
+```
+
+### Python Module
+You can also use the NVDApi module directly in your Python code:
 
 ```python
 from modules.nvdapi import NVDApi
@@ -42,38 +67,35 @@ nvd = NVDApi()
 cve_details = nvd.get_cve("CVE-2021-44228")
 
 # Search for vulnerabilities affecting a specific product
-apache_vulns = nvd.search_by_product("apache", "log4j")
-
-# Get exploitable vulnerabilities
-exploitable = nvd.get_exploitable()
+apache_vulns = nvd.search_cpe("apache", "log4j")
 ```
 
-## Documentation
-For detailed documentation, please refer to the [Wiki](https://github.com/yourusername/nvd-db-api/wiki).
+## Required Dependencies
+- Flask 2.3.3+
+- SQLAlchemy 2.0.23+
+- Requests 2.31.0+
+- Python 3.8+
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+For a complete list, see the `requirements.txt` file.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-# #Screenshots
-
-### Dashboard
-
-![Dashboard](screenshots/dashboard.png)
+## Project Structure
+```
+app.py                # Main Flask application
+cve_database.db       # SQLite database for CVE storage
+requirements.txt      # Python dependencies
+modules/              # Python modules
+├── nvdapi.py         # NVD API client
+static/               # Static web assets
+├── css/              # Stylesheets
+templates/            # HTML templates
+screenshots/          # Application screenshots
+```
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgements
 - [National Vulnerability Database](https://nvd.nist.gov/)
-- [nvdlib](https://github.com/vehemont/nvdlib)
 
 ## Disclaimer
 This tool is intended for legitimate security research and penetration testing with proper authorization. The authors are not responsible for any misuse or damage caused by this program.
-
-Similar code found with 2 license types
