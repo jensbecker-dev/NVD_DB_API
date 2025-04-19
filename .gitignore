@@ -3,8 +3,9 @@
 *.sqlite
 *.sqlite3
 
-# Ignore specific database files if needed
-# nvd_database.db
+# Explicitly ignore specific database files
+cve_database.db
+cve_datenbank.db
 
 # Other common files to ignore
 __pycache__/
