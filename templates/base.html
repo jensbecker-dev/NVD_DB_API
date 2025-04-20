@@ -18,7 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}?v={{ now().timestamp() }}">
     
     <!-- Custom CSS - Kombinierte Datei aus style.css und styles.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/combined-styles.css') }}">
@@ -469,7 +469,7 @@
         <!-- Logo Header -->
         <div class="sidebar-header">
             <a href="{{ url_for('index') }}" class="text-decoration-none">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="NVD CVE Database" class="logo-img">
+                <img src="{{ url_for('static', filename='logo.png') }}?v={{ now().timestamp() }}" alt="NVD CVE Database" class="logo-img">
                 <h2>NVD CVE Database</h2>
             </a>
         </div>

@@ -32,24 +32,54 @@ document.addEventListener('DOMContentLoaded', function() {
         innerHex.setAttribute("d", "M120,50 L160,70 L160,110 L120,130 L80,110 L80,70 Z");
         svg.appendChild(innerHex);
         
-        // Create data protection symbol (shield with checkmark)
+        // Enhanced data protection symbol - more professional shield design without keyhole text
         const shieldSymbol = document.createElementNS(svgNS, "path");
         shieldSymbol.setAttribute("class", "nvd-logo-shield-symbol");
-        shieldSymbol.setAttribute("d", "M120,60 L140,70 L140,90 C140,100 130,110 120,110 C110,110 100,100 100,90 L100,70 Z");
+        // Improved professional shield design with modern look
+        shieldSymbol.setAttribute("d", "M120,60 L148,72 L148,95 C148,115 130,125 120,125 C110,125 92,115 92,95 L92,72 Z");
         svg.appendChild(shieldSymbol);
         
-        // Create digital circuit pattern
+        // Create center emblem (replacing the text with a professional symbol)
+        const centerEmblem = document.createElementNS(svgNS, "path");
+        centerEmblem.setAttribute("class", "nvd-logo-center-emblem");
+        // Cybersecurity lock icon instead of text
+        centerEmblem.setAttribute("d", "M120,78 C113,78 108,83 108,90 L108,93 L106,93 C104,93 102,95 102,97 L102,110 C102,112 104,114 106,114 L134,114 C136,114 138,112 138,110 L138,97 C138,95 136,93 134,93 L132,93 L132,90 C132,83 127,78 120,78 Z M120,82 C124,82 128,85 128,90 L128,93 L112,93 L112,90 C112,85 116,82 120,82 Z");
+        svg.appendChild(centerEmblem);
+        
+        // Add decorative lines inside shield (enhancing professional look)
+        const decorativeLinesGroup = document.createElementNS(svgNS, "g");
+        decorativeLinesGroup.setAttribute("class", "nvd-logo-decorative-lines");
+        
+        // Horizontal security scan lines
+        for (let i = 0; i < 5; i++) {
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("class", "nvd-logo-scan-line");
+            line.setAttribute("x1", "100");
+            line.setAttribute("y1", 95 + (i * 5));
+            line.setAttribute("x2", "140");
+            line.setAttribute("y2", 95 + (i * 5));
+            line.style.animationDelay = `${i * 0.2}s`;
+            decorativeLinesGroup.appendChild(line);
+        }
+        
+        svg.appendChild(decorativeLinesGroup);
+        
+        // Create digital circuit pattern (enhanced)
         const circuitGroup = document.createElementNS(svgNS, "g");
         circuitGroup.setAttribute("class", "nvd-logo-circuit");
         
-        // Circuit lines
+        // More sophisticated circuit lines for professional tech look
         const circuitPaths = [
             "M60,90 L45,90 L45,110 L75,110",
             "M180,90 L195,90 L195,110 L165,110",
-            "M100,133 L100,140 L140,140 L140,133",
+            "M100,130 L100,145 L140,145 L140,130",
             "M120,150 L120,165",
-            "M85,75 L35,75 L35,130 L65,130",
-            "M155,75 L205,75 L205,130 L175,130"
+            "M80,65 L40,65 L40,130 L70,130",
+            "M160,65 L200,65 L200,130 L170,130",
+            // Adding more professional circuit paths
+            "M80,100 L50,100 L50,125",
+            "M160,100 L190,100 L190,125",
+            "M90,45 L90,35 L150,35 L150,45"
         ];
         
         circuitPaths.forEach((path, index) => {
@@ -60,11 +90,13 @@ document.addEventListener('DOMContentLoaded', function() {
             circuitGroup.appendChild(line);
         });
         
-        // Circuit nodes
+        // Circuit nodes (enhanced with more points)
         const circuitNodes = [
             [45, 90], [45, 110], [195, 90], [195, 110],
-            [100, 140], [140, 140], [120, 165],
-            [35, 75], [35, 130], [205, 75], [205, 130]
+            [100, 145], [140, 145], [120, 165],
+            [40, 65], [40, 130], [200, 65], [200, 130],
+            [50, 100], [50, 125], [190, 100], [190, 125],
+            [90, 35], [150, 35]
         ];
         
         circuitNodes.forEach((coords, index) => {
@@ -95,25 +127,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         svg.appendChild(pulseGroup);
         
-        // Text elements
-        const textGroup = document.createElementNS(svgNS, "g");
-        textGroup.setAttribute("class", "nvd-logo-text");
-        
-        // NVD Explorer Text
-        const nvdText = document.createElementNS(svgNS, "text");
-        nvdText.setAttribute("x", "120");
-        nvdText.setAttribute("y", "95");
-        nvdText.setAttribute("text-anchor", "middle");
-        nvdText.setAttribute("class", "nvd-logo-text-main");
-        nvdText.textContent = "NVD Explorer";
-        textGroup.appendChild(nvdText);
-        
-        svg.appendChild(textGroup);
-        
-        // Add interactive data points (blinking dots)
+        // Add interactive data points (blinking dots in professional pattern)
         const dataPoints = [
-            [80, 80], [105, 75], [135, 75], [160, 80],
-            [85, 105], [155, 105], [105, 90], [135, 90]
+            // Outer hexagon corners
+            [75, 67], [165, 67], [75, 113], [165, 113], [120, 142],
+            // Inner security symbol points
+            [115, 85], [125, 85], [110, 95], [130, 95], [110, 105], [130, 105],
+            // Additional strategic points
+            [100, 75], [140, 75], [100, 105], [140, 105],
+            [120, 65]
         ];
         
         const dataGroup = document.createElementNS(svgNS, "g");
@@ -309,7 +331,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Hook into page navigation events to refresh logo animations
-    // This works for single-page applications or when using history API
     window.addEventListener('popstate', addPageSpecificAnimations);
     
     // Check for page changes periodically (helps with traditional navigation)

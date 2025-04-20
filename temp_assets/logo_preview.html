@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Logo Preview</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+        
+        .logo-preview-container {
+            background-color: #1a2b47;
+            width: 400px;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        /* Hexagonal shield styling - enhanced professional look */
+        .nvd-logo-hex-shield {
+            fill: #1a2b47;
+            stroke: #0d6efd;
+            stroke-width: 1.8;
+            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
+        }
+
+        /* Inner hexagon styling - more professional gradients */
+        .nvd-logo-inner-hex {
+            fill: #243760;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1;
+        }
+
+        /* Shield symbol styling - enhanced with professional colors */
+        .nvd-logo-shield-symbol {
+            fill: #0d6efd;
+        }
+
+        /* New center emblem styles (replacing the text) */
+        .nvd-logo-center-emblem {
+            fill: #ffffff;
+            opacity: 0.9;
+        }
+
+        /* New decorative scan lines for professional tech look */
+        .nvd-logo-scan-line {
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 1;
+            opacity: 0.7;
+        }
+
+        /* Circuit styling - more refined for professional look */
+        .nvd-logo-circuit-line {
+            stroke: rgba(255, 255, 255, 0.25);
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .nvd-logo-circuit-node {
+            fill: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Interactive data points - enhanced for professional clarity */
+        .nvd-logo-data-point {
+            fill: rgba(255, 255, 255, 0.5);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-preview-container">
+        <svg viewBox="0 0 240 180" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <!-- Hexagonal shield -->
+            <path class="nvd-logo-hex-shield" d="M120,30 L180,60 L180,120 L120,150 L60,120 L60,60 Z"></path>
+            
+            <!-- Inner hexagon -->
+            <path class="nvd-logo-inner-hex" d="M120,50 L160,70 L160,110 L120,130 L80,110 L80,70 Z"></path>
+            
+            <!-- Enhanced shield design without text -->
+            <path class="nvd-logo-shield-symbol" d="M120,60 L148,72 L148,95 C148,115 130,125 120,125 C110,125 92,115 92,95 L92,72 Z"></path>
+            
+            <!-- Center emblem (lock icon replacing text) -->
+            <path class="nvd-logo-center-emblem" d="M120,78 C113,78 108,83 108,90 L108,93 L106,93 C104,93 102,95 102,97 L102,110 C102,112 104,114 106,114 L134,114 C136,114 138,112 138,110 L138,97 C138,95 136,93 134,93 L132,93 L132,90 C132,83 127,78 120,78 Z M120,82 C124,82 128,85 128,90 L128,93 L112,93 L112,90 C112,85 116,82 120,82 Z"></path>
+            
+            <!-- Decorative scan lines -->
+            <g class="nvd-logo-decorative-lines">
+                <line class="nvd-logo-scan-line" x1="100" y1="95" x2="140" y2="95"></line>
+                <line class="nvd-logo-scan-line" x1="100" y1="100" x2="140" y2="100"></line>
+                <line class="nvd-logo-scan-line" x1="100" y1="105" x2="140" y2="105"></line>
+                <line class="nvd-logo-scan-line" x1="100" y1="110" x2="140" y2="110"></line>
+                <line class="nvd-logo-scan-line" x1="100" y1="115" x2="140" y2="115"></line>
+            </g>
+            
+            <!-- Digital circuit pattern -->
+            <g class="nvd-logo-circuit">
+                <path class="nvd-logo-circuit-line" d="M60,90 L45,90 L45,110 L75,110"></path>
+                <path class="nvd-logo-circuit-line" d="M180,90 L195,90 L195,110 L165,110"></path>
+                <path class="nvd-logo-circuit-line" d="M100,130 L100,145 L140,145 L140,130"></path>
+                <path class="nvd-logo-circuit-line" d="M120,150 L120,165"></path>
+                <path class="nvd-logo-circuit-line" d="M80,65 L40,65 L40,130 L70,130"></path>
+                <path class="nvd-logo-circuit-line" d="M160,65 L200,65 L200,130 L170,130"></path>
+                <path class="nvd-logo-circuit-line" d="M80,100 L50,100 L50,125"></path>
+                <path class="nvd-logo-circuit-line" d="M160,100 L190,100 L190,125"></path>
+                <path class="nvd-logo-circuit-line" d="M90,45 L90,35 L150,35 L150,45"></path>
+            </g>
+            
+            <!-- Circuit nodes -->
+            <g class="nvd-logo-circuit-nodes">
+                <circle class="nvd-logo-circuit-node" cx="45" cy="90" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="45" cy="110" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="195" cy="90" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="195" cy="110" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="100" cy="145" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="140" cy="145" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="120" cy="165" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="40" cy="65" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="40" cy="130" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="200" cy="65" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="200" cy="130" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="50" cy="100" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="50" cy="125" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="190" cy="100" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="190" cy="125" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="90" cy="35" r="3"></circle>
+                <circle class="nvd-logo-circuit-node" cx="150" cy="35" r="3"></circle>
+            </g>
+            
+            <!-- Data points in professional pattern -->
+            <g class="nvd-logo-data-points">
+                <circle class="nvd-logo-data-point" cx="75" cy="67" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="165" cy="67" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="75" cy="113" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="165" cy="113" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="120" cy="142" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="115" cy="85" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="125" cy="85" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="110" cy="95" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="130" cy="95" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="110" cy="105" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="130" cy="105" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="100" cy="75" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="140" cy="75" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="100" cy="105" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="140" cy="105" r="2"></circle>
+                <circle class="nvd-logo-data-point" cx="120" cy="65" r="2"></circle>
+            </g>
+        </svg>
+    </div>
+</body>
+</html>

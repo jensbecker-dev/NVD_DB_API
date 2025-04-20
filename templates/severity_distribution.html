@@ -39,29 +39,40 @@
         opacity: 0.9;
     }
 
+    /* Updated severity card color schemes with improved contrast */
     .severity-critical {
-        background: linear-gradient(135deg, #dc3545, #a71d2a);
+        background: linear-gradient(135deg, #dc3545, #9c1825);
         color: white;
     }
 
     .severity-high {
-        background: linear-gradient(135deg, #fd7e14, #c65e0a);
+        background: linear-gradient(135deg, #fd7e14, #b35900);
         color: white;
     }
 
     .severity-medium {
-        background: linear-gradient(135deg, #ffc107, #d39e00);
-        color: #343a40;
+        background: linear-gradient(135deg, #ffc107, #d69e00);
+        color: #212529; /* Darker text for better contrast */
+        text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.3); /* Add subtle text shadow for readability */
     }
 
     .severity-low {
-        background: linear-gradient(135deg, #0dcaf0, #0a9cb5);
-        color: #343a40;
+        background: linear-gradient(135deg, #0dcaf0, #0590ae);
+        color: #212529; /* Darker text for better contrast */
+        text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.3); /* Add subtle text shadow for readability */
     }
 
     .severity-unknown {
-        background: linear-gradient(135deg, #6c757d, #4a5157);
+        background: linear-gradient(135deg, #6c757d, #343a40);
         color: white;
+    }
+
+    /* Card title styling for better visibility */
+    .severity-card .card-title {
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
     }
 
     .severity-stats {
@@ -72,6 +83,7 @@
         font-weight: 600;
     }
 
+    /* Updated legend styles */
     .custom-legend {
         display: flex;
         justify-content: center;
@@ -84,6 +96,7 @@
         display: flex;
         align-items: center;
         margin: 5px 15px;
+        font-weight: 500;
     }
 
     .legend-color {
@@ -97,12 +110,19 @@
     .card {
         border: none;
         border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
 
     .card-header {
         background-color: #f8f9fa;
         border-bottom: 1px solid #dee2e6;
         font-weight: 500;
+        padding: 1rem 1.25rem;
+    }
+
+    .card-title {
+        color: #343a40;
+        margin-bottom: 0;
     }
 
     h1 {
@@ -113,6 +133,20 @@
     .breadcrumb {
         background-color: transparent;
         padding-left: 0;
+    }
+
+    /* Improved summary statistics styling */
+    .severity-stats .d-flex {
+        padding: 0.5rem 0;
+    }
+
+    .severity-stats .border-bottom {
+        border-bottom-color: rgba(0,0,0,0.1) !important;
+    }
+
+    /* Improved chart labels */
+    canvas {
+        filter: drop-shadow(0px 2px 5px rgba(0,0,0,0.05));
     }
 </style>
 {% endblock %}
@@ -281,6 +315,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Updated color scheme for better contrast
     const colors = {
         critical: '#dc3545',
         high: '#fd7e14',
@@ -292,6 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
         mediumLight: 'rgba(255, 193, 7, 0.7)',
         lowLight: 'rgba(13, 202, 240, 0.7)',
         unknownLight: 'rgba(108, 117, 125, 0.7)',
+        criticalDark: '#9c1825',
+        highDark: '#b35900',
+        mediumDark: '#d69e00',
+        lowDark: '#0590ae',
+        unknownDark: '#343a40',
         cvssBlue: 'rgba(54, 162, 235, 0.6)',
         cvssBlueBorder: 'rgba(54, 162, 235, 1)'
     };
@@ -317,7 +357,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     colors.unknown
                 ],
                 borderColor: '#ffffff',
-                borderWidth: 2
+                borderWidth: 2,
+                hoverBackgroundColor: [
+                    colors.criticalDark,
+                    colors.highDark,
+                    colors.mediumDark,
+                    colors.lowDark,
+                    colors.unknownDark
+                ]
             }]
         },
         options: {
@@ -329,6 +376,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     display: false
                 },
                 tooltip: {
+                    titleFont: {
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 14
+                    },
                     callbacks: {
                         label: function(context) {
                             let label = context.label || '';

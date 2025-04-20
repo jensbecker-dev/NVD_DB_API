@@ -24,12 +24,12 @@
     overflow: visible;
 }
 
-/* Hexagonal shield styling */
+/* Hexagonal shield styling - enhanced professional look */
 .nvd-logo-hex-shield {
     fill: #1a2b47;
     stroke: #0d6efd;
     stroke-width: 1.8;
-    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3));
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
     transition: all 0.3s ease;
 }
 
@@ -40,7 +40,7 @@
     filter: drop-shadow(0 6px 12px rgba(13, 110, 253, 0.4));
 }
 
-/* Inner hexagon styling */
+/* Inner hexagon styling - more professional gradients */
 .nvd-logo-inner-hex {
     fill: #243760;
     stroke: rgba(255, 255, 255, 0.1);
@@ -54,7 +54,7 @@
     filter: drop-shadow(0 0 8px rgba(13, 110, 253, 0.2));
 }
 
-/* Shield symbol styling */
+/* Shield symbol styling - enhanced with professional colors */
 .nvd-logo-shield-symbol {
     fill: #0d6efd;
     transition: all 0.3s ease;
@@ -70,7 +70,44 @@
     animation: scan-pulse 1.5s ease-in-out;
 }
 
-/* Circuit styling */
+/* New center emblem styles (replacing the text) */
+.nvd-logo-center-emblem {
+    fill: #ffffff;
+    opacity: 0.9;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-center-emblem {
+    fill: #ffffff;
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+}
+
+.nvd-logo-scanning .nvd-logo-center-emblem {
+    fill: #e1fbef;
+    filter: drop-shadow(0 0 4px rgba(37, 240, 155, 0.6));
+    animation: emblem-pulse 1.5s ease-in-out;
+}
+
+/* New decorative scan lines for professional tech look */
+.nvd-logo-scan-line {
+    stroke: rgba(255, 255, 255, 0.2);
+    stroke-width: 1;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+}
+
+.nvd-logo-active .nvd-logo-scan-line {
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 1.2;
+}
+
+.nvd-logo-scanning .nvd-logo-scan-line {
+    stroke: rgba(37, 240, 155, 0.5);
+    animation: scan-line-pulse 1.5s ease-in-out infinite;
+}
+
+/* Circuit styling - more refined for professional look */
 .nvd-logo-circuit-line {
     stroke: rgba(255, 255, 255, 0.25);
     stroke-width: 1.5;
@@ -101,7 +138,7 @@
     animation: data-pulse 0.7s ease-out !important;
 }
 
-/* Interactive data points */
+/* Interactive data points - enhanced for professional clarity */
 .nvd-logo-data-point {
     fill: rgba(255, 255, 255, 0.5);
     opacity: 0.6;
@@ -121,7 +158,7 @@
     filter: drop-shadow(0 0 4px rgba(13, 157, 253, 0.8));
 }
 
-/* Pulse animation styling */
+/* Pulse animation styling - refined for professional look */
 .nvd-logo-pulse {
     fill: transparent;
     stroke: rgba(13, 110, 253, 0.5);
@@ -132,33 +169,6 @@
 
 .nvd-logo-active .nvd-logo-pulse {
     animation: pulse-ring 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-}
-
-/* Text styling */
-.nvd-logo-text-main {
-    fill: white;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    font-weight: bold;
-    font-size: 24px; /* Adjusted font size */
-    letter-spacing: 1px;
-    opacity: 0.95;
-    transition: all 0.3s ease;
-}
-
-/* Subtitle text no longer needed */
-.nvd-logo-text-sub {
-    display: none;
-}
-
-.nvd-logo-active .nvd-logo-text-main {
-    fill: white;
-    opacity: 1;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
-}
-
-.nvd-logo-active .nvd-logo-text-sub {
-    opacity: 0.9;
-    letter-spacing: 2px;
 }
 
 /* Ensure consistent sizing across all pages */
@@ -191,6 +201,30 @@
 
 .nvd-logo-ready {
     animation: logo-appear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* New animation for emblem pulse */
+@keyframes emblem-pulse {
+    0%, 100% {
+        opacity: 0.9;
+        filter: drop-shadow(0 0 3px rgba(37, 240, 155, 0.6));
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 8px rgba(37, 240, 155, 0.9));
+    }
+}
+
+/* New animation for scan lines */
+@keyframes scan-line-pulse {
+    0%, 100% {
+        opacity: 0.5;
+        stroke-width: 1;
+    }
+    50% {
+        opacity: 0.8;
+        stroke-width: 1.5;
+    }
 }
 
 /* Animations */
