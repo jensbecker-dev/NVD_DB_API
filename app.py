@@ -299,9 +299,12 @@ def update_database_task():
 CVE_Model = None
 
 # Flask routes
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+@app.route('/index')
 def index():
     """Home page showing overview and search form"""
+    # Force logo update on home page by ensuring fresh copy is served
+    logo_timestamp = datetime.now().timestamp()
     results = []
     search_term = request.args.get('search_term', '')
     search_performed = request.args.get('search_performed', 'false').lower() == 'true'
