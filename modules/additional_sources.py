@@ -43,7 +43,7 @@ CIRCL_API_BASE_URL = "https://cve.circl.lu/api"
 NIST_DATA_GOV_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
 # Constants for Exploit-DB
-EXPLOIT_DB_CSV_URL = "https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv"
+EXPLOIT_DB_CSV_URL = "https://gitlab.com/exploit-database/exploitdb/-/blob/71bfc9b6c5b3eccfbf6a9509bc385b2155f4a6c4/files_exploits.csv?raw=true"
 EXPLOIT_DB_ARCHIVE_URL = "https://gitlab.com/exploit-database/exploitdb/-/archive/main/exploitdb-main.zip"
 EXPLOIT_DB_CSV_FIELDS = ["id", "file", "description", "date", "author", "platform", "type", "port", "cve"]
 EXPLOIT_DB_BASE_URL = "https://www.exploit-db.com/exploits/"
@@ -389,6 +389,54 @@ class ExploitDBAdapter:
             logger.error(f"Error downloading or storing exploit code for ID {exploit_id}: {e}")
             return None
     
+    @staticmethod
+    def get_exploit_code_content(exploit_id):
+        """
+        Get the actual exploit code content for a given exploit ID.
+        
+        Args:
+            exploit_id: The Exploit-DB ID
+            
+        Returns:
+            str: The exploit code content or None if not available
+        """
+        try:
+            # First check if it's in the database
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            if os.path.exists(db_path):
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT code FROM exploit_code WHERE id = ?", (exploit_id,))
+                result = cursor.fetchone()
+                conn.close()
+                
+                if result and result[0]:
+                    logger.info(f"Found exploit code for ID {exploit_id} in database")
+                    return result[0]
+            
+            # If not in database, check filesystem
+            file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    code = f.read()
+                    logger.info(f"Found exploit code for ID {exploit_id} in filesystem")
+                    return code
+                    
+            # If not found locally, download it
+            url = f"{EXPLOIT_DB_RAW_URL}{exploit_id}"
+            logger.info(f"Downloading exploit code from {url}")
+            response = requests.get(url)
+            response.raise_for_status()
+            
+            # Store for future use
+            code = response.text
+            ExploitDBAdapter.download_and_store_exploit(exploit_id)
+            return code
+            
+        except Exception as e:
+            logger.error(f"Error getting exploit code content for ID {exploit_id}: {e}")
+            return None
+
     @staticmethod
     def download_and_store_exploits_bulk(exploit_ids, max_workers=10):
         """

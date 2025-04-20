@@ -81,6 +81,65 @@
         </div>
     </div>
     
+    <!-- Exploit-DB Stats Card -->
+    {% if exploitdb_stats %}
+    <div class="card mb-4 dashboard-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-lightning-fill me-2 text-danger"></i>
+                <span class="fw-bold">Exploit-DB Status</span>
+            </div>
+            <a href="/update_exploitdb" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-repeat me-1"></i>Update Exploits
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-light">
+                        <h6 class="fw-bold mb-2">Exploit Statistics</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total Exploits:</span>
+                            <span class="badge bg-secondary rounded-pill">{{ exploitdb_stats.stats.total_exploits }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>With CVE References:</span>
+                            <span class="badge bg-primary rounded-pill">{{ exploitdb_stats.stats.with_cve }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Downloaded Locally:</span>
+                            <span class="badge bg-success rounded-pill">{{ exploitdb_stats.stats.downloaded }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-light">
+                        <h6 class="fw-bold mb-2">Recent Exploits</h6>
+                        <div class="recent-exploits" style="max-height: 150px; overflow-y: auto;">
+                            {% for exploit in exploitdb_stats.stats.recent_exploits[:5] %}
+                            <div class="recent-exploit-item mb-2 p-2 border-start border-danger border-3" style="background-color: rgba(255, 109, 65, 0.1);">
+                                <div class="small fw-bold">
+                                    <a href="/cve/{{ exploit.cve_id }}" class="text-decoration-none">{{ exploit.cve_id }}</a>
+                                </div>
+                                <div class="small text-truncate">{{ exploit.description }}</div>
+                                <div class="small text-muted">
+                                    <i class="bi bi-calendar-event me-1"></i>{{ exploit.date }}
+                                    <a href="https://www.exploit-db.com/exploits/{{ exploit.id }}" target="_blank" class="ms-2 text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>View on Exploit-DB
+                                    </a>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info py-2 mb-0">No recent exploits available</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Quick Access Section -->
     <h4 class="mb-2 d-flex align-items-center fs-5">
         <i class="bi bi-lightning-charge-fill me-2"></i> Quick Access

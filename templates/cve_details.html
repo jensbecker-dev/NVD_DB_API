@@ -149,7 +149,7 @@
             </div>
 
             <!-- Exploits Card -->
-            {% if cve.has_exploit %}
+            {% if cve.has_exploit or exploits %}
             <div class="card mb-4">
                 <div class="card-header d-flex align-items-center">
                     <i class="bi bi-lightning-fill me-2 fs-5" style="color: #ff6d41;"></i>
@@ -165,7 +165,35 @@
                     </div>
                     
                     <div class="exploits-list mt-3">
-                        {% if cve.exploit_data %}
+                        {% if exploits %}
+                            {% for exploit in exploits %}
+                                <div class="exploit-card p-3 mb-3 rounded border-start border-danger border-3" style="background-color: rgba(255, 109, 65, 0.1);">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <h6 class="mb-0">{{ exploit.description or 'Unnamed Exploit' }}</h6>
+                                        <span class="badge bg-secondary">{{ exploit.type or 'Unknown Type' }}</span>
+                                    </div>
+                                    
+                                    <div class="mb-2 small"><i class="bi bi-calendar3 me-1"></i> Published: {{ exploit.date or 'Unknown' }}</div>
+                                    
+                                    {% if exploit.author %}
+                                        <div class="mb-2 small"><i class="bi bi-person me-1"></i> Author: {{ exploit.author }}</div>
+                                    {% endif %}
+                                    
+                                    {% if exploit.platform %}
+                                        <div class="mb-2 small"><i class="bi bi-cpu me-1"></i> Platform: {{ exploit.platform }}</div>
+                                    {% endif %}
+                                    
+                                    <div class="mt-3 d-flex gap-2">
+                                        <a href="{{ exploit.url }}" target="_blank" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i>View on Exploit-DB
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary view-exploit-code" data-exploit-id="{{ exploit.exploit_id }}">
+                                            <i class="bi bi-code-slash me-1"></i>View Exploit Code
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% elif cve.exploit_data %}
                             {% set exploit_list = cve.exploit_data|safe|trim|tojson|forceescape|safe %}
                             <script>
                                 try {
@@ -207,99 +235,11 @@
                                             exploitCard.innerHTML = content;
                                             document.querySelector('.exploits-list').appendChild(exploitCard);
                                         });
-                                        
-                                        // Add event listeners for the "View Exploit Code" buttons
-                                        document.querySelectorAll('.view-exploit-code').forEach(function(button) {
-                                            button.addEventListener('click', function() {
-                                                var exploitId = this.getAttribute('data-exploit-id');
-                                                fetchExploitCode(exploitId);
-                                            });
-                                        });
                                     }
                                 } catch (e) {
                                     console.error('Error parsing exploit data:', e);
                                     document.querySelector('.exploits-list').innerHTML = 
                                         '<div class="alert alert-warning">Error displaying exploit details</div>';
-                                }
-                                
-                                // Function to fetch and display exploit code
-                                function fetchExploitCode(exploitId) {
-                                    var exploitCodeModal = document.getElementById('exploitCodeModal');
-                                    if (!exploitCodeModal) {
-                                        // Create modal if it doesn't exist
-                                        exploitCodeModal = document.createElement('div');
-                                        exploitCodeModal.className = 'modal fade';
-                                        exploitCodeModal.id = 'exploitCodeModal';
-                                        exploitCodeModal.tabIndex = '-1';
-                                        exploitCodeModal.setAttribute('aria-labelledby', 'exploitCodeModalLabel');
-                                        exploitCodeModal.setAttribute('aria-hidden', 'true');
-                                        
-                                        exploitCodeModal.innerHTML = `
-                                            <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="exploitCodeModalLabel">Exploit Code</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <div class="alert alert-warning mb-3">
-                                                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                                            <strong>Warning:</strong> This code is provided for educational purposes only. 
-                                                            Using exploits against systems without authorization is illegal.
-                                                        </div>
-                                                        <div id="exploitCodeContent" class="bg-dark text-light p-3 rounded" style="overflow-x: auto;">
-                                                            <pre><code id="exploitCodeText">Loading exploit code...</code></pre>
-                                                        </div>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                        <button type="button" class="btn btn-primary" id="copyExploitCode">
-                                                            <i class="bi bi-clipboard me-1"></i>Copy Code
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
-                                        
-                                        document.body.appendChild(exploitCodeModal);
-                                        
-                                        // Add event listener for copy button
-                                        document.getElementById('copyExploitCode').addEventListener('click', function() {
-                                            var codeText = document.getElementById('exploitCodeText').textContent;
-                                            navigator.clipboard.writeText(codeText).then(function() {
-                                                var copyBtn = document.getElementById('copyExploitCode');
-                                                copyBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
-                                                setTimeout(function() {
-                                                    copyBtn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy Code';
-                                                }, 2000);
-                                            });
-                                        });
-                                    }
-                                    
-                                    // Show the modal
-                                    var modal = new bootstrap.Modal(exploitCodeModal);
-                                    modal.show();
-                                    
-                                    // Update modal title
-                                    document.getElementById('exploitCodeModalLabel').textContent = 'Exploit Code for ID: ' + exploitId;
-                                    
-                                    // Fetch the exploit code from our endpoint
-                                    fetch('/api/exploit-code/' + exploitId)
-                                        .then(response => {
-                                            if (!response.ok) {
-                                                throw new Error('Failed to fetch exploit code');
-                                            }
-                                            return response.text();
-                                        })
-                                        .then(code => {
-                                            document.getElementById('exploitCodeText').textContent = code;
-                                        })
-                                        .catch(error => {
-                                            document.getElementById('exploitCodeText').textContent = 
-                                                'Error loading exploit code: ' + error.message + 
-                                                '\n\nFall back to viewing the exploit directly on Exploit-DB: ' +
-                                                'https://www.exploit-db.com/exploits/' + exploitId;
-                                        });
                                 }
                             </script>
                         {% else %}
@@ -416,6 +356,34 @@
         </div>
     </div>
 </div>
+
+<!-- Exploit Code Modal -->
+<div class="modal fade" id="exploitCodeModal" tabindex="-1" aria-labelledby="exploitCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exploitCodeModalLabel">Exploit Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Warning:</strong> This code is provided for educational purposes only. 
+                    Using exploits against systems without authorization is illegal.
+                </div>
+                <div id="exploitCodeContent" class="bg-dark text-light p-3 rounded" style="overflow-x: auto;">
+                    <pre><code id="exploitCodeText">Loading exploit code...</code></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="copyExploitCode">
+                    <i class="bi bi-clipboard me-1"></i>Copy Code
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -440,6 +408,54 @@
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
             }, 100 + (index * 150));
+        });
+        
+        // Setup event listeners for the "View Exploit Code" buttons
+        document.querySelectorAll('.view-exploit-code').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var exploitId = this.getAttribute('data-exploit-id');
+                fetchExploitCode(exploitId);
+            });
+        });
+        
+        // Function to fetch and display exploit code
+        function fetchExploitCode(exploitId) {
+            var modal = new bootstrap.Modal(document.getElementById('exploitCodeModal'));
+            modal.show();
+            
+            // Update modal title
+            document.getElementById('exploitCodeModalLabel').textContent = 'Exploit Code for ID: ' + exploitId;
+            document.getElementById('exploitCodeText').textContent = 'Loading exploit code...';
+            
+            // Fetch the exploit code from our endpoint
+            fetch('/api/exploit-code/' + exploitId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch exploit code');
+                    }
+                    return response.text();
+                })
+                .then(code => {
+                    document.getElementById('exploitCodeText').textContent = code;
+                })
+                .catch(error => {
+                    document.getElementById('exploitCodeText').textContent = 
+                        'Error loading exploit code: ' + error.message + 
+                        '\n\nFall back to viewing the exploit directly on Exploit-DB: ' +
+                        'https://www.exploit-db.com/exploits/' + exploitId;
+                });
+        }
+        
+        // Add event listener for copy button
+        document.getElementById('copyExploitCode')?.addEventListener('click', function() {
+            var codeText = document.getElementById('exploitCodeText').textContent;
+            navigator.clipboard.writeText(codeText).then(function() {
+                var copyBtn = document.getElementById('copyExploitCode');
+                copyBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+                setTimeout(function() {
+                    copyBtn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy Code';
+                }, 2000);
+            });
         });
     });
 </script>

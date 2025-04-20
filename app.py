@@ -12,6 +12,7 @@ import calendar
 from werkzeug.routing.exceptions import BuildError
 from functools import lru_cache
 import hashlib
+import requests
 
 # Note: The 'RequestsDependencyWarning' suggests installing 'chardet' or 'charset_normalizer'
 # for optimal character encoding detection by the requests library (likely used in nvdapi.py).
@@ -364,13 +365,23 @@ def index():
     severity_filter = request.args.get('severity', '')
     page = request.args.get('page', 1, type=int)
     per_page = 100
+    
+    # Lade Exploit-DB Statistiken
+    exploitdb_stats = None
+    try:
+        # API-Endpunkt abfragen für die Exploit-Statistiken
+        response = requests.get(f"http://localhost:{request.host.split(':')[1] if ':' in request.host else '8080'}/api/exploitdb/status")
+        if response.status_code == 200:
+            exploitdb_stats = response.json()
+    except Exception as e:
+        logging.warning(f"Fehler beim Laden der Exploit-DB Statistiken: {e}")
 
     try:
         engine = create_local_cve_db()
         session = get_session(engine)
 
         if CVE_Model is None:
-            return render_template('index.html', error_message="Database model not initialized. Please update the database first.", results=[], search_term=search_term, search_performed=search_performed, severity_counts={}, total_cve_count=0)
+            return render_template('index.html', error_message="Database model not initialized. Please update the database first.", results=[], search_term=search_term, search_performed=search_performed, severity_counts={}, total_cve_count=0, exploitdb_stats=exploitdb_stats)
 
         if request.method == 'POST':
             search_performed = True
@@ -415,11 +426,11 @@ def index():
 
     except Exception as e:
         logging.error(f"Error during search or getting counts: {e}")
-        return render_template('index.html', error_message=f"Operation failed: {e}", results=[], search_term=search_term, search_performed=search_performed, severity_counts={}, total_cve_count=0)
+        return render_template('index.html', error_message=f"Operation failed: {e}", results=[], search_term=search_term, search_performed=search_performed, severity_counts={}, total_cve_count=0, exploitdb_stats=exploitdb_stats)
     finally:
         session.close()
 
-    return render_template('index.html', results=results, search_term=search_term, search_performed=search_performed, severity=severity_filter, severity_counts=severity_counts, total_cve_count=total_cve_count, current_page=page, total_pages=total_pages, total_results=total_results, exploitable=exploitable_only)
+    return render_template('index.html', results=results, search_term=search_term, search_performed=search_performed, severity=severity_filter, severity_counts=severity_counts, total_cve_count=total_cve_count, current_page=page, total_pages=total_pages, total_results=total_results, exploitable=exploitable_only, exploitdb_stats=exploitdb_stats)
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
@@ -504,6 +515,7 @@ def cve_details(cve_id):
     try:
         cve_data = None
         from_api = False
+        exploits = []
 
         # Try database first
         if CVE_Model is not None:
@@ -516,14 +528,180 @@ def cve_details(cve_id):
         if not cve_data:
             return redirect(url_for(Routes.CVE_DETAILS, cve_id=cve_id))
 
+        # Exploits für diese CVE abrufen
         if cve_data:
-            return render_template('cve_details.html', cve=cve_data, from_api=from_api)
+            try:
+                from modules.additional_sources import ExploitDBAdapter
+                exploits = ExploitDBAdapter.get_exploits_for_cve(cve_id)
+                
+                # Setzen Sie Exploit-Flags
+                if exploits:
+                    cve_data.has_exploit = True
+                    cve_data.exploit_data = json.dumps(exploits)
+            except Exception as e:
+                logging.error(f"Error fetching exploits for {cve_id}: {e}")
+                # Exploit-Fehler sollten nicht die gesamte Seite scheitern lassen
+                pass
+
+            return render_template('cve_details.html', cve=cve_data, from_api=from_api, exploits=exploits)
         else:
             return redirect(url_for(Routes.CVE_DETAILS, cve_id=cve_id))
 
     except Exception as e:
         logging.error(f"Error fetching CVE details for {cve_id}: {e}")
         return render_template('error.html', error=f"An error occurred while fetching details for {cve_id}.")
+
+@app.route('/api/exploit-code/<exploit_id>')
+def get_exploit_code(exploit_id):
+    """API endpoint to get exploit code for a specific exploit ID"""
+    try:
+        from modules.additional_sources import ExploitDBAdapter
+        
+        # Versuche, den Exploit-Code abzurufen
+        exploit_code = ExploitDBAdapter.get_exploit_code_content(exploit_id)
+        
+        if exploit_code:
+            return exploit_code, 200, {'Content-Type': 'text/plain'}
+        else:
+            return f"Exploit code not found for ID: {exploit_id}", 404, {'Content-Type': 'text/plain'}
+    
+    except Exception as e:
+        logging.error(f"Error fetching exploit code for ID {exploit_id}: {e}")
+        return f"Error fetching exploit code: {str(e)}", 500, {'Content-Type': 'text/plain'}
+
+@app.route('/api/cve/<cve_id>/exploits')
+def get_cve_exploits(cve_id):
+    """API endpoint to get exploits for a specific CVE ID"""
+    try:
+        from modules.additional_sources import ExploitDBAdapter
+        
+        # Hole alle Exploits für diese CVE
+        exploits = ExploitDBAdapter.get_exploits_for_cve(cve_id)
+        
+        # Wenn als Parameter angegeben, füge auch den Code hinzu
+        include_code = request.args.get('include_code') == 'true'
+        if include_code:
+            for exploit in exploits:
+                exploit_id = exploit.get('exploit_id')
+                if exploit_id:
+                    code = ExploitDBAdapter.get_exploit_code_content(exploit_id)
+                    if code:
+                        exploit['code_content'] = code
+        
+        return jsonify({
+            'status': 'success',
+            'cve_id': cve_id,
+            'count': len(exploits),
+            'exploits': exploits
+        })
+    
+    except Exception as e:
+        logging.error(f"Error fetching exploits for CVE {cve_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'cve_id': cve_id
+        }), 500
+
+@app.route('/update_exploitdb')
+def update_exploitdb():
+    """Update the exploit database with the latest entries from Exploit-DB"""
+    try:
+        from modules.additional_sources import ExploitDBAdapter
+        
+        # Initialisiere die Exploit-Datenbank, falls sie noch nicht existiert
+        ExploitDBAdapter.init_exploit_db()
+        
+        # Importiere die Metadaten
+        metadata_count = ExploitDBAdapter.import_all_exploit_metadata()
+        
+        # Starte den Download-Prozess im Hintergrund
+        download_thread = threading.Thread(
+            target=ExploitDBAdapter.download_all_exploits,
+            kwargs={'limit': 1000, 'filter_cve_only': True}
+        )
+        download_thread.daemon = True
+        download_thread.start()
+        
+        return render_template('update_status.html', 
+                              status={
+                                  'is_updating': True,
+                                  'type': 'exploit_db',
+                                  'message': f'Imported {metadata_count} exploit metadata entries. Downloading exploit code in the background.',
+                                  'progress': 50
+                              })
+    
+    except Exception as e:
+        logging.error(f"Error updating exploit database: {e}")
+        return render_template('error.html', 
+                              error_message=f"Failed to update exploit database: {str(e)}")
+
+@app.route('/api/exploitdb/status')
+def get_exploitdb_status():
+    """Get status information about the exploit database"""
+    try:
+        from modules.additional_sources import ExploitDBAdapter
+        
+        # Get counts of locally available exploits
+        local_exploits = ExploitDBAdapter.get_locally_available_exploits()
+        
+        # Verbinde mit der Datenbank und hole Statistiken
+        import sqlite3
+        import os
+        
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'exploit_cache.db')
+        stats = {
+            'total_exploits': 0,
+            'with_cve': 0,
+            'downloaded': 0,
+            'recent_exploits': []
+        }
+        
+        if os.path.exists(db_path):
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Gesamtzahl der Exploits
+            cursor.execute("SELECT COUNT(*) FROM exploit_metadata")
+            stats['total_exploits'] = cursor.fetchone()[0]
+            
+            # Anzahl der Exploits mit CVE-ID
+            cursor.execute("SELECT COUNT(*) FROM exploit_metadata WHERE cve_id != ''")
+            stats['with_cve'] = cursor.fetchone()[0]
+            
+            # Anzahl der heruntergeladenen Exploits
+            cursor.execute("SELECT COUNT(*) FROM exploit_metadata WHERE download_status = 1")
+            stats['downloaded'] = cursor.fetchone()[0]
+            
+            # Neueste Exploits (10 Einträge)
+            cursor.execute("""
+                SELECT id, description, date, cve_id FROM exploit_metadata 
+                WHERE cve_id != '' 
+                ORDER BY date DESC LIMIT 10
+            """)
+            stats['recent_exploits'] = [
+                {
+                    'id': row[0],
+                    'description': row[1],
+                    'date': row[2],
+                    'cve_id': row[3]
+                } for row in cursor.fetchall()
+            ]
+            
+            conn.close()
+            
+        return jsonify({
+            'status': 'success',
+            'local_exploit_count': len(local_exploits),
+            'stats': stats
+        })
+    
+    except Exception as e:
+        logging.error(f"Error getting exploit database status: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @app.route('/vulnerability_category/<string:category_slug>')
 def vulnerability_category(category_slug):
@@ -572,7 +750,7 @@ def vulnerability_category(category_slug):
         for severity, count in severity_query:
             s_upper = (severity or 'UNKNOWN').upper()
             if s_upper in severity_map:
-                 severity_map[s_upper] = count
+                severity_map[s_upper] = count
         severity_counts = severity_map
         total_cve_count = sum(severity_counts.values())
         # --- End of severity counts calculation ---
