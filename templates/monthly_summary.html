@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="pe-3 text-end">${trendHtml}</td>
                 </tr>
             `;
-            monthlyDataBody.insertAdjacentHTML('afterbegin', row); // Insert at the beginning to reverse order
+            monthlyDataBody.insertAdjacentHTML('beforeend', row); // Insert at the end for chronological order
         }
         // Update badges
         if(tableYearBadge) tableYearBadge.textContent = year;

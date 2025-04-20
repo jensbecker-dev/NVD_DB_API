@@ -1,0 +1,199 @@
+/* NVD Dynamic Logo Styles */
+.nvd-logo-container {
+    width: 100%;
+    max-width: 200px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+    cursor: pointer;
+    overflow: visible;
+    transform-origin: center;
+    transform: scale(1);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nvd-logo-container:hover {
+    transform: scale(1.05);
+}
+
+.nvd-logo-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Shield base styling */
+.nvd-logo-shield {
+    fill: rgba(33, 37, 41, 0.95);
+    stroke: #0d6efd;
+    stroke-width: 1.5;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-shield {
+    fill: rgba(33, 37, 41, 0.98);
+    stroke: #0d9dfd;
+    stroke-width: 2;
+    filter: drop-shadow(0 6px 12px rgba(13, 110, 253, 0.4));
+}
+
+/* Grid styling */
+.nvd-logo-grid-line {
+    stroke: rgba(255, 255, 255, 0.25);
+    stroke-width: 1;
+    fill: none;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-grid-line {
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    animation: dash 1.5s linear forwards;
+}
+
+.nvd-logo-alert {
+    stroke: #dc3545 !important;
+    stroke-width: 2.5 !important;
+    filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.7));
+    animation: alert-pulse 0.7s ease-out !important;
+}
+
+/* Lock styling */
+.nvd-logo-lock-body {
+    fill: #0d6efd;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-lock-shackle {
+    stroke: #0d6efd;
+    stroke-width: 3;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-keyhole {
+    fill: rgba(33, 37, 41, 0.9);
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-lock-body {
+    fill: #0d9dfd;
+    animation: secure-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.nvd-logo-active .nvd-logo-lock-shackle {
+    stroke: #0d9dfd;
+    stroke-width: 3.5;
+}
+
+.nvd-logo-scanning .nvd-logo-keyhole {
+    fill: #25f09b;
+    animation: scan-pulse 1.5s ease-in-out;
+}
+
+/* Pulse animation styling */
+.nvd-logo-pulse {
+    fill: transparent;
+    stroke: rgba(13, 110, 253, 0.7);
+    stroke-width: 2;
+    transform-origin: center;
+    opacity: 0;
+}
+
+.nvd-logo-active .nvd-logo-pulse {
+    animation: pulse-ring 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+}
+
+/* Text styling */
+.nvd-logo-text-main {
+    fill: white;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 20px;
+    letter-spacing: 1px;
+    opacity: 0.95;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-text-sub {
+    fill: white;
+    font-family: 'Arial', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-text-main {
+    fill: white;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+}
+
+.nvd-logo-active .nvd-logo-text-sub {
+    opacity: 0.9;
+    letter-spacing: 2px;
+}
+
+/* Animations */
+@keyframes pulse-ring {
+    0% {
+        r: 0;
+        opacity: 0.8;
+    }
+    100% {
+        r: 35;
+        opacity: 0;
+    }
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes secure-pulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 3px rgba(13, 110, 253, 0.1));
+    }
+    50% {
+        filter: drop-shadow(0 0 8px rgba(13, 110, 253, 0.5));
+    }
+}
+
+@keyframes alert-pulse {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.3;
+    }
+}
+
+@keyframes scan-pulse {
+    0%, 100% {
+        fill: #25f09b;
+        filter: drop-shadow(0 0 5px rgba(37, 240, 155, 0.7));
+    }
+    50% {
+        fill: #0df0e0;
+        filter: drop-shadow(0 0 10px rgba(13, 240, 224, 0.9));
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .nvd-logo-container {
+        max-width: 180px;
+        height: 110px;
+    }
+}
+
+@media (max-width: 576px) {
+    .nvd-logo-container {
+        max-width: 160px;
+        height: 100px;
+    }
+}
