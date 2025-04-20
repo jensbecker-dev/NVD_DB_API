@@ -1,137 +1,281 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
 {% block title %}{{ cve.cve_id }} - CVE Details{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h1 class="h4 mb-0 text-primary"><i class="bi bi-bug me-2"></i>{{ cve.cve_id }}</h1>
+<div class="container-fluid py-3">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ cve.cve_id }}</li>
+        </ol>
+    </nav>
+
+    <!-- CVE Header -->
+    <div class="cve-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+        <div>
+            <h1 class="h3 mb-2 d-flex align-items-center">
+                <i class="bi bi-shield-exclamation me-2" style="color: var(--primary-color);"></i>{{ cve.cve_id }}
+            </h1>
+            <p class="text-muted mb-0">
+                <i class="bi bi-calendar3 me-1"></i> Published: {{ cve.published_date.strftime('%Y-%m-%d') if cve.published_date else 'Unknown' }}
+                {% if cve.last_modified_date and cve.last_modified_date != cve.published_date %}
+                <span class="ms-3"><i class="bi bi-pencil me-1"></i> Last updated: {{ cve.last_modified_date.strftime('%Y-%m-%d') }}</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="mt-3 mt-md-0 d-flex align-items-center">
             {% if from_api %}
-                <span class="badge bg-info text-dark">Fetched from NVD API</span>
+                <span class="badge rounded-pill p-2 px-3" style="background-color: rgba(13, 202, 240, 0.2); color: #0dcaf0; border: 1px solid #0dcaf0;">
+                    <i class="bi bi-cloud-download me-1"></i> Fetched from NVD API
+                </span>
             {% else %}
-                 <span class="badge bg-success">From Local Database</span>
+                <span class="badge rounded-pill p-2 px-3" style="background-color: rgba(52, 168, 83, 0.2); color: #34a853; border: 1px solid #34a853;">
+                    <i class="bi bi-database-check me-1"></i> Local Database
+                </span>
+            {% endif %}
+            
+            {% if cve.severity %}
+                <div class="ms-2">
+                    {% if cve.severity == 'CRITICAL' %}
+                    <span class="badge rounded-pill severity-indicator critical" style="background-color: var(--danger-color);">
+                        <i class="bi bi-exclamation-octagon-fill me-1"></i>Critical
+                    </span>
+                    {% elif cve.severity == 'HIGH' %}
+                    <span class="badge rounded-pill" style="background-color: #ff6d41;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>High
+                    </span>
+                    {% elif cve.severity == 'MEDIUM' %}
+                    <span class="badge rounded-pill" style="background-color: var(--warning-color); color: #212529;">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i>Medium
+                    </span>
+                    {% elif cve.severity == 'LOW' %}
+                    <span class="badge rounded-pill" style="background-color: var(--secondary-color);">
+                        <i class="bi bi-info-circle-fill me-1"></i>Low
+                    </span>
+                    {% else %}
+                    <span class="badge rounded-pill bg-secondary">
+                        <i class="bi bi-question-circle-fill me-1"></i>Unknown
+                    </span>
+                    {% endif %}
+                </div>
             {% endif %}
         </div>
-        <div class="card-body">
-            <!-- Severity and Scores -->
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <strong>Severity:</strong>
-                    {% if cve.severity == 'CRITICAL' %}
-                    <span class="badge rounded-pill badge-critical fs-6 ms-2"><i class="bi bi-exclamation-octagon-fill me-1"></i>Critical</span>
-                    {% elif cve.severity == 'HIGH' %}
-                    <span class="badge rounded-pill badge-high fs-6 ms-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>High</span>
-                    {% elif cve.severity == 'MEDIUM' %}
-                    <span class="badge rounded-pill badge-medium fs-6 ms-2"><i class="bi bi-exclamation-circle-fill me-1"></i>Medium</span>
-                    {% elif cve.severity == 'LOW' %}
-                    <span class="badge rounded-pill badge-low fs-6 ms-2"><i class="bi bi-info-circle-fill me-1"></i>Low</span>
-                    {% else %}
-                    <span class="badge rounded-pill badge-unknown fs-6 ms-2"><i class="bi bi-question-circle-fill me-1"></i>Unknown</span>
-                    {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- CVSS Scores Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-bar-chart-fill me-2 fs-5" style="color: var(--primary-color);"></i>
+                    <h5 class="m-0">CVSS Scores</h5>
                 </div>
-                <div class="col-md-4">
-                    <strong>CVSS v3 Score:</strong>
-                    {% if cve.cvss_v3_score %}
-                        <span class="badge bg-dark ms-2">{{ cve.cvss_v3_score }}</span>
-                    {% else %}
-                        <span class="text-muted ms-2">N/A</span>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <strong>CVSS v2 Score:</strong>
-                     {% if cve.cvss_v2_score %}
-                        <span class="badge bg-secondary ms-2">{{ cve.cvss_v2_score }}</span>
-                    {% else %}
-                        <span class="text-muted ms-2">N/A</span>
-                    {% endif %}
+                <div class="card-body">
+                    <div class="row g-4">
+                        {% if cve.cvss_v3_score %}
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3" style="background-color: rgba(26, 115, 232, 0.08); border-left: 4px solid var(--primary-color);">
+                                <h6 class="mb-2 text-muted">CVSS v3 Score</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-3" style="height: 12px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ cve.cvss_v3_score * 10 }}%; background-color: {{ get_cvss_bar_color(cve.cvss_v3_score) }};" 
+                                             aria-valuenow="{{ cve.cvss_v3_score }}" aria-valuemin="0" aria-valuemax="10">
+                                        </div>
+                                    </div>
+                                    <span class="fs-4 fw-bold">{{ cve.cvss_v3_score }}</span>
+                                </div>
+                                <div class="mt-2 small text-muted">
+                                    {% if cve.cvss_v3_score >= 9.0 %}
+                                    Critical severity - Immediate remediation recommended
+                                    {% elif cve.cvss_v3_score >= 7.0 %}
+                                    High severity - Prioritize remediation
+                                    {% elif cve.cvss_v3_score >= 4.0 %}
+                                    Medium severity - Schedule for remediation
+                                    {% else %}
+                                    Low severity - Address as resources allow
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if cve.cvss_v2_score %}
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3" style="background-color: rgba(108, 117, 125, 0.08); border-left: 4px solid #6c757d;">
+                                <h6 class="mb-2 text-muted">CVSS v2 Score</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-3" style="height: 12px;">
+                                        <div class="progress-bar bg-secondary" role="progressbar" 
+                                             style="width: {{ cve.cvss_v2_score * 10 }}%;" 
+                                             aria-valuenow="{{ cve.cvss_v2_score }}" aria-valuemin="0" aria-valuemax="10">
+                                        </div>
+                                    </div>
+                                    <span class="fs-4 fw-bold">{{ cve.cvss_v2_score }}</span>
+                                </div>
+                                <div class="mt-2 small text-muted">
+                                    Legacy scoring system (CVSS v2)
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if not cve.cvss_v3_score and not cve.cvss_v2_score %}
+                        <div class="col-12">
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                No CVSS scores available for this vulnerability.
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
-            <!-- Dates -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>Published Date:</strong>
-                    <span class="ms-2">{{ cve.published_date.strftime('%Y-%m-%d %H:%M:%S') if cve.published_date else 'N/A' }}</span>
+            <!-- Description Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-file-text me-2 fs-5" style="color: var(--primary-color);"></i>
+                    <h5 class="m-0">Description</h5>
                 </div>
-                <div class="col-md-6">
-                    <strong>Last Modified:</strong>
-                    <span class="ms-2">{{ cve.last_modified_date.strftime('%Y-%m-%d %H:%M:%S') if cve.last_modified_date else 'N/A' }}</span>
+                <div class="card-body">
+                    <div class="cve-description">
+                        {{ cve.description | safe }}
+                    </div>
                 </div>
             </div>
 
-            <!-- Description -->
-            <div class="mb-4">
-                <h5 class="text-secondary"><i class="bi bi-file-text me-2"></i>Description</h5>
-                <p class="text-body bg-light p-3 rounded">{{ cve.description | safe }}</p>
-            </div>
-
-            <!-- CWE -->
-            {% if cve.cwe_id %}
-            <div class="mb-4">
-                <h5 class="text-secondary"><i class="bi bi-diagram-3 me-2"></i>Weakness Enumeration (CWE)</h5>
-                {# Assuming cwe_id is a comma-separated string #}
-                {% set cwe_list = cve.cwe_id.split(',') %}
-                {% for cwe in cwe_list %}
-                    <span class="badge bg-light text-dark border me-1 mb-1 p-2">{{ cwe.strip() }}</span>
-                {% endfor %}
+            <!-- References Card -->
+            {% if cve.references %}
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-link-45deg me-2 fs-5" style="color: var(--primary-color);"></i>
+                    <h5 class="m-0">References</h5>
+                </div>
+                <div class="card-body">
+                    <div class="references-list">
+                        {# Assuming references is a comma-separated string #}
+                        {% set ref_list = cve.references.split(',') %}
+                        {% for ref in ref_list %}
+                            {% if ref.strip() %}
+                            <a href="{{ ref.strip() }}" target="_blank" rel="noopener noreferrer" class="reference-link">
+                                <i class="bi bi-box-arrow-up-right me-2"></i>
+                                {{ ref.strip() }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
             {% endif %}
+        </div>
 
-            <!-- References -->
-            {% if cve.references %}
-            <div class="mb-4">
-                <h5 class="text-secondary"><i class="bi bi-link-45deg me-2"></i>References</h5>
-                <ul class="list-group list-group-flush">
-                    {# Assuming references is a comma-separated string #}
-                    {% set ref_list = cve.references.split(',') %}
-                    {% for ref in ref_list %}
-                        {% if ref.strip() %}
-                        <li class="list-group-item px-0 py-1">
-                            <a href="{{ ref.strip() }}" target="_blank" rel="noopener noreferrer">{{ ref.strip() }}</a>
-                        </li>
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- CWE Card -->
+            {% if cve.cwe_id %}
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-diagram-3 me-2 fs-5" style="color: var(--primary-color);"></i>
+                    <h5 class="m-0">Weakness Type</h5>
+                </div>
+                <div class="card-body">
+                    {# Assuming cwe_id is a comma-separated string #}
+                    {% set cwe_list = cve.cwe_id.split(',') %}
+                    {% for cwe in cwe_list %}
+                        {% if cwe.strip() %}
+                        <div class="d-flex align-items-center mb-2 p-2 rounded" style="background-color: rgba(26, 115, 232, 0.05);">
+                            <i class="bi bi-bug me-2 text-danger"></i>
+                            <div>
+                                <strong>{{ cwe.strip() }}</strong>
+                                {% set cwe_number = cwe.strip().split('-')[1] if '-' in cwe.strip() else '' %}
+                                {% if cwe_number %}
+                                <div class="small text-muted">
+                                    <a href="https://cwe.mitre.org/data/definitions/{{ cwe_number }}.html" target="_blank" class="text-decoration-none">
+                                        View CWE details <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
                         {% endif %}
                     {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            <!-- CPE Affected -->
-            {% if cve.cpe_affected %}
-             <div class="mb-4">
-                <h5 class="text-secondary"><i class="bi bi-cpu me-2"></i>Affected Configurations (CPE)</h5>
-                <div style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
-                    <ul class="list-unstyled mb-0 small">
-                         {# Assuming cpe_affected is a comma-separated string #}
-                        {% set cpe_list = cve.cpe_affected.split(',') %}
-                        {% for cpe in cpe_list %}
-                             {% if cpe.strip() %}
-                            <li><code>{{ cpe.strip() }}</code></li>
-                             {% endif %}
-                        {% endfor %}
-                    </ul>
                 </div>
             </div>
             {% endif %}
 
-            <div class="mt-4">
-                 <a href="{{ request.referrer or url_for('index') }}" class="btn btn-outline-secondary">
-                     <i class="bi bi-arrow-left me-1"></i>Back
-                 </a>
+            <!-- CPE Affected Card -->
+            {% if cve.cpe_affected %}
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-cpu me-2 fs-5" style="color: var(--primary-color);"></i>
+                    <h5 class="m-0">Affected Products</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="p-3" style="max-height: 350px; overflow-y: auto;">
+                        {# Assuming cpe_affected is a comma-separated string #}
+                        {% set cpe_list = cve.cpe_affected.split(',') %}
+                        {% for cpe in cpe_list %}
+                            {% if cpe.strip() %}
+                                <div class="cpe-item">{{ cpe.strip() }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-tools me-2 fs-5" style="color: var(--primary-color);"></i>
+                    <h5 class="m-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ request.referrer or url_for('index') }}" class="btn btn-outline-primary mb-2 w-100">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Results
+                    </a>
+                    
+                    <a href="https://nvd.nist.gov/vuln/detail/{{ cve.cve_id }}" target="_blank" class="btn btn-outline-secondary mb-2 w-100">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View on NVD Website
+                    </a>
+                    
+                    <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name={{ cve.cve_id }}" target="_blank" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View on MITRE
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_head %}
-{# Reuse badge styles from index.html if needed, or define here #}
-<style>
-    .badge-critical { background-color: #dc3545; }
-    .badge-high { background-color: #fd7e14; }
-    .badge-medium { background-color: #ffc107; color: #000 !important; } /* Ensure text is dark */
-    .badge-low { background-color: #0dcaf0; color: #000 !important; } /* Ensure text is dark */
-    .badge-unknown { background-color: #6c757d; }
-    code { font-size: 0.8em; }
-</style>
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Helper function to get color for CVSS progress bar
+        function getCvssBarColor(score) {
+            if (score >= 9.0) return 'var(--danger-color)';
+            if (score >= 7.0) return '#ff6d41';
+            if (score >= 4.0) return 'var(--warning-color)';
+            return 'var(--secondary-color)';
+        }
+        
+        // Apply animated entrance to cards
+        const cards = document.querySelectorAll('.card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, 100 + (index * 150));
+        });
+    });
+</script>
 {% endblock %}

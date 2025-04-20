@@ -32,6 +32,30 @@ app.static_folder = 'static'
 def inject_now():
     return {'now': datetime.now}
 
+# Add CVSS color helper function
+@app.context_processor
+def utility_functions():
+    def get_cvss_color(score):
+        if score is None:
+            return '#6c757d'  # Default gray for unknown
+        score = float(score)
+        if score >= 9.0:
+            return '#ea4335'  # Critical (red)
+        elif score >= 7.0:
+            return '#ff6d41'  # High (orange)
+        elif score >= 4.0:
+            return '#fbbc04'  # Medium (yellow)
+        else:
+            return '#34a853'  # Low (green)
+    
+    def get_cvss_bar_color(score):
+        return get_cvss_color(score)  # Same function, different name for clarity
+        
+    return dict(
+        get_cvss_color=get_cvss_color,
+        get_cvss_bar_color=get_cvss_bar_color
+    )
+
 # Database setup
 def create_local_cve_db():
     """
