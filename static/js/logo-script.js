@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!logoContainer) return;
         
         // Remove any existing page-specific classes
-        logoContainer.classList.remove('nvd-logo-dashboard', 'nvd-logo-severity', 'nvd-logo-monthly', 'nvd-logo-vendor');
+        logoContainer.classList.remove('nvd-logo-dashboard', 'nvd-logo-severity', 'nvd-logo-monthly', 'nvd-logo-vendor', 'nvd-logo-update');
         
         // Add page-specific classes based on current URL
         if (currentPath === '/' || currentPath === '/index') {
@@ -293,6 +293,15 @@ document.addEventListener('DOMContentLoaded', function() {
             logoContainer.classList.add('nvd-logo-monthly');
         } else if (currentPath.includes('vendor')) {
             logoContainer.classList.add('nvd-logo-vendor');
+        } else if (currentPath.includes('update')) {
+            logoContainer.classList.add('nvd-logo-update');
+        }
+        
+        // Make sure the pulse container is visible on all pages
+        const pulseContainer = document.querySelector('.nvd-logo-pulse-container');
+        if (pulseContainer) {
+            pulseContainer.style.display = 'block';
+            pulseContainer.style.opacity = '1';
         }
         
         // Add small random animation when changing pages

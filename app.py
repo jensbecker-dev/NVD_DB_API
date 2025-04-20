@@ -303,8 +303,8 @@ CVE_Model = None
 @app.route('/index')
 def index():
     """Home page showing overview and search form"""
-    # Force logo update on home page by ensuring fresh copy is served
-    logo_timestamp = datetime.now().timestamp()
+    # Force logo update on home page by adding a timestamp to prevent caching issues
+    logo_timestamp = int(datetime.now().timestamp())
     results = []
     search_term = request.args.get('search_term', '')
     search_performed = request.args.get('search_performed', 'false').lower() == 'true'
@@ -913,6 +913,14 @@ def top_vendors():
     # This is a placeholder. Replace with actual logic or remove if not needed.
     # You might want to return a simple template or just text.
     return "Top Vendors Page (Placeholder)", 200
+
+@app.route('/static/logo.png')
+def serve_logo():
+    """
+    Spezielle Route, um das Logo zu liefern.
+    Dadurch wird der 404-Fehler bei der Anfrage nach /static/logo.png vermieden.
+    """
+    return redirect(url_for('static', filename='img/logo.png', v=int(datetime.now().timestamp())))
 
 # Run the application
 if __name__ == '__main__':

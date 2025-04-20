@@ -1,7 +1,7 @@
 /* NVD Modern Logo Styles - Professional Cybersecurity Theme */
 .nvd-logo-container {
     width: 100%;
-    height: 200px; /* Fixed height */
+    height: 300px; /* Increased height from 200px to 300px */
     margin: 0 auto;
     position: relative;
     cursor: pointer;
@@ -16,7 +16,7 @@
 }
 
 .nvd-logo-container:hover {
-    transform: scale(1.05);
+    transform: scale(1.08); /* Increased scale effect on hover */
 }
 
 .nvd-logo-svg {
@@ -167,26 +167,46 @@
     stroke-width: 1.5;
     transform-origin: center;
     opacity: 0;
+    animation: pulse-ring 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
 }
 
-.nvd-logo-active .nvd-logo-pulse {
-    animation: pulse-ring 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+.nvd-logo-pulse-container {
+    display: block;
+    opacity: 1;
+}
+
+/* Ensure pulse animation works on all pages, not just active state */
+.pulse-1 {
+    animation-delay: 0s;
+}
+
+.pulse-2 {
+    animation-delay: 0.7s;
+}
+
+.pulse-3 {
+    animation-delay: 1.4s;
+}
+
+/* Specific styling for update page */
+.nvd-logo-update .nvd-logo-pulse {
+    stroke: rgba(48, 248, 161, 0.6); /* Grünlicher Ton für Update-Animation */
 }
 
 /* Ensure consistent sizing across all pages */
 .sidebar .nvd-logo-container {
     max-width: 100%;
     width: 100%;
-    height: 200px;
+    height: 300px; /* Increased to match main logo height */
 }
 
 /* Ensure monthly summary style on all pages */
 .nvd-logo-monthly .nvd-logo-hex-shield,
 .nvd-logo-hex-shield {
-    fill: #1a2b47;
-    stroke: #0d6efd;
-    stroke-width: 1.8;
-    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3));
+    fill: #152238; /* Consistent with our new color scheme */
+    stroke: #1d85fd;
+    stroke-width: 2.2;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
 }
 
 /* Add a dynamic page load animation */
@@ -249,23 +269,27 @@
 
 @keyframes scan-pulse {
     0%, 100% {
-        fill: #25f09b;
-        filter: drop-shadow(0 0 8px rgba(37, 240, 155, 0.7));
+        fill: #30f8a1; /* Brighter green */
+        filter: drop-shadow(0 0 10px rgba(48, 248, 161, 0.7));
+        transform: scale(1);
     }
     50% {
         fill: #0df0e0;
-        filter: drop-shadow(0 0 15px rgba(13, 240, 224, 0.9));
+        filter: drop-shadow(0 0 18px rgba(13, 240, 224, 0.9));
+        transform: scale(1.02); /* Subtle scale for pulsing effect */
     }
 }
 
 @keyframes data-pulse {
     0% {
         opacity: 1;
-        transform: scale(1.5);
+        transform: scale(1.6);
+        filter: drop-shadow(0 0 8px rgba(13, 157, 253, 0.9));
     }
     100% {
         opacity: 0.3;
         transform: scale(1);
+        filter: none;
     }
 }
 
@@ -280,17 +304,106 @@
     }
 }
 
-/* Force consistent styling on responsive screens */
+/* Force consistent styling on responsive screens with improved visibility */
+@media (max-width: 992px) {
+    .nvd-logo-container {
+        width: 100%;
+        height: 260px; /* Increased from 190px for tablets */
+    }
+}
+
 @media (max-width: 768px) {
     .nvd-logo-container {
         width: 100%;
-        height: 180px; /* Slightly smaller on medium devices */
+        height: 240px; /* Increased from 180px for medium devices */
+    }
+    
+    .nvd-logo-hex-shield {
+        stroke-width: 2.5; /* Thicker stroke for better visibility on smaller screens */
     }
 }
 
 @media (max-width: 576px) {
     .nvd-logo-container {
         width: 100%;
-        height: 160px; /* Slightly smaller on small devices */
+        height: 220px; /* Increased from 160px for mobile devices */
+    }
+    
+    .nvd-logo-hex-shield {
+        stroke-width: 2.8; /* Even thicker stroke for mobile */
+    }
+    
+    .nvd-logo-center-emblem {
+        opacity: 1; /* Full opacity on small screens */
+    }
+}
+
+/* High-contrast and reduced motion accommodations for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .nvd-logo-circuit-line, 
+    .nvd-logo-data-point, 
+    .nvd-logo-pulse {
+        animation: none !important;
+    }
+    
+    .nvd-logo-scanning .nvd-logo-shield-symbol,
+    .nvd-logo-scanning .nvd-logo-center-emblem,
+    .nvd-logo-scanning .nvd-logo-scan-line {
+        animation: none !important;
+        transition: none !important;
+    }
+    
+    .nvd-logo-point-active {
+        animation: none !important;
+        fill: #1d85fd !important;
+    }
+}
+
+@media (prefers-contrast: more) {
+    .nvd-logo-hex-shield {
+        stroke: #1563db !important;
+        stroke-width: 3 !important;
+    }
+    
+    .nvd-logo-center-emblem {
+        fill: #ffffff !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Fix for Safari and iOS */
+@supports (-webkit-touch-callout: none) {
+    .nvd-logo-svg {
+        height: 100% !important;
+        width: auto !important;
+        max-width: 100%;
+    }
+    
+    .nvd-logo-circuit-line {
+        animation-duration: 2s !important;
+    }
+}
+
+/* Print media styling */
+@media print {
+    .nvd-logo-container {
+        height: 240px !important; /* Increased from 160px for print */
+    }
+    
+    .nvd-logo-circuit-line,
+    .nvd-logo-scan-line,
+    .nvd-logo-data-point {
+        animation: none !important;
+    }
+    
+    .nvd-logo-hex-shield {
+        stroke: #000 !important;
+        stroke-width: 2.5 !important;
+        fill: #fff !important;
+        filter: none !important;
+    }
+    
+    .nvd-logo-center-emblem {
+        fill: #000 !important;
     }
 }

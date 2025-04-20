@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVEXPLORER</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5; /* Slightly lighter background */
+        }
+
+        .logo-preview-container {
+            background-color: #ffffff; /* White background for better contrast */
+            width: 400px;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px; /* Softer radius */
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); /* Softer shadow */
+        }
+
+        /* --- Optimized Logo Styles --- */
+
+        /* Outer Hexagon Shield */
+        .nvd-logo-hex-shield-optimized {
+            fill: url(#shieldGradient);
+            stroke: #ffffff; /* White stroke for contrast on potential dark backgrounds */
+            stroke-width: 1.5;
+            filter: drop-shadow(0 4px 8px rgba(0, 50, 150, 0.3)); /* Adjusted shadow */
+        }
+
+        /* Inner Hexagon Detail */
+        .nvd-logo-inner-hex-optimized {
+            fill: url(#innerGradient);
+            opacity: 0.85; /* Slight transparency */
+        }
+
+        /* Central Emblem (Abstracted) */
+        .nvd-logo-center-emblem-optimized {
+            fill: url(#emblemGradient);
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        /* Background Pattern Lines */
+        .nvd-logo-pattern-line {
+            stroke: rgba(13, 110, 253, 0.2); /* Subtle blue lines */
+            stroke-width: 1;
+            fill: none;
+        }
+
+        /* Accent Dots */
+        .nvd-logo-accent-dot {
+            fill: rgba(255, 255, 255, 0.6); /* Softer white dots */
+            opacity: 0.7;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="logo-preview-container" id="nvd-logo-container">
+        <svg viewBox="0 0 200 200" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <defs>
+                <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#0d6efd; stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#0a58ca; stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="innerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#2c3e50; stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#1a2b47; stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="emblemGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#ffffff; stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#e0e0e0; stop-opacity:1" />
+                </linearGradient>
+            </defs>
+
+            <!-- Outer Hexagon -->
+            <path class="nvd-logo-hex-shield-optimized" d="M100,10 L175,50 L175,150 L100,190 L25,150 L25,50 Z"></path>
+
+            <!-- Inner Hexagon -->
+            <path class="nvd-logo-inner-hex-optimized" d="M100,30 L155,60 L155,140 L100,170 L45,140 L45,60 Z"></path>
+
+            <!-- Subtle Background Pattern -->
+            <g class="nvd-logo-background-pattern">
+                <path class="nvd-logo-pattern-line" d="M55,65 Q 100,80 145,65"></path>
+                <path class="nvd-logo-pattern-line" d="M55,135 Q 100,120 145,135"></path>
+                <path class="nvd-logo-pattern-line" d="M40,100 L160,100"></path>
+                 <path class="nvd-logo-pattern-line" d="M70,45 L70,155"></path>
+                 <path class="nvd-logo-pattern-line" d="M130,45 L130,155"></path>
+            </g>
+
+            <!-- Central Emblem (Abstracted 'V' or Checkmark) -->
+            <path class="nvd-logo-center-emblem-optimized" d="M80,90 L100,115 L120,90 L110,80 L100,95 L90,80 Z M100,120 L125,90 L115,80 L100,100 Z"></path> <!-- Example: Abstract V/Check -->
+            <!-- Alternative Abstract Emblem: -->
+            <!-- <path class="nvd-logo-center-emblem-optimized" d="M90,85 Q 100,75 110,85 L 100,115 Z"></path> -->
+
+
+            <!-- Accent Dots -->
+            <g class="nvd-logo-accent-dots">
+                <circle class="nvd-logo-accent-dot" cx="70" cy="55" r="2.5"></circle>
+                <circle class="nvd-logo-accent-dot" cx="130" cy="55" r="2.5"></circle>
+                <circle class="nvd-logo-accent-dot" cx="40" cy="100" r="2.5"></circle>
+                <circle class="nvd-logo-accent-dot" cx="160" cy="100" r="2.5"></circle>
+                <circle class="nvd-logo-accent-dot" cx="70" cy="145" r="2.5"></circle>
+                <circle class="nvd-logo-accent-dot" cx="130" cy="145" r="2.5"></circle>
+            </g>
+
+        </svg>
+    </div>
+    <script>
+        function addPageSpecificAnimations() {
+            const currentPath = window.location.pathname;
+            const logoContainer = document.getElementById('nvd-logo-container');
+            if (!logoContainer) return;
+            
+            // Remove any existing page-specific classes
+            logoContainer.classList.remove('nvd-logo-dashboard', 'nvd-logo-severity', 'nvd-logo-monthly', 'nvd-logo-vendor');
+            
+            // Add page-specific classes based on current URL
+            if (currentPath === '/' || currentPath === '/index') {
+                logoContainer.classList.add('nvd-logo-dashboard');
+            } else if (currentPath.includes('severity')) {
+                logoContainer.classList.add('nvd-logo-severity');
+            } else if (currentPath.includes('monthly')) {
+                logoContainer.classList.add('nvd-logo-monthly');
+            } else if (currentPath.includes('vendor')) {
+                logoContainer.classList.add('nvd-logo-vendor');
+            }
+            // ...
+        }
+    </script>
+</body>
+</html>

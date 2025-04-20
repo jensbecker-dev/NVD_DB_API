@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVD Logo Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        canvas {
+            background-color: transparent;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .instructions {
+            max-width: 600px;
+            margin: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0b5ed7;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h2>NVD Logo Generator</h2>
+        <p>Dieses Tool erstellt ein statisches PNG-Logo für die NVD-Anwendung. Klicken Sie auf "Logo generieren und speichern", um das Logo zu erstellen und herunterzuladen.</p>
+        
+        <div>
+            <canvas id="logoCanvas" width="240" height="180"></canvas>
+        </div>
+        
+        <button id="downloadButton">Logo generieren und speichern</button>
+        
+        <p>Anleitung:</p>
+        <ol>
+            <li>Speichern Sie die heruntergeladene Datei als "logo.png"</li>
+            <li>Platzieren Sie die Datei im Verzeichnis "static/img/" Ihrer Anwendung</li>
+        </ol>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('logoCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Logo-Farben
+            const colors = {
+                shield: '#152238',
+                shieldStroke: '#1d85fd',
+                innerHex: '#243760',
+                shieldSymbol: '#1a88fd',
+                emblem: '#ffffff'
+            };
+            
+            // Logo zeichnen
+            function drawLogo() {
+                // Canvas leeren
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Äußeres Hexagon
+                drawHexagon(120, 90, 60, colors.shield, colors.shieldStroke, 2.2);
+                
+                // Inneres Hexagon
+                drawHexagon(120, 90, 40, colors.innerHex, 'rgba(255, 255, 255, 0.15)', 1.2);
+                
+                // Schild-Symbol
+                drawShield(120, 90, 28, colors.shieldSymbol);
+                
+                // Zentrales Emblem (Schloss)
+                drawLock(120, 90, colors.emblem);
+                
+                // Dekorative Elemente und Knotenpunkte
+                drawCircuitNodes();
+            }
+            
+            // Hexagon zeichnen
+            function drawHexagon(x, y, radius, fillColor, strokeColor, strokeWidth) {
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI / 3) - Math.PI / 6;
+                    const px = x + radius * Math.cos(angle);
+                    const py = y + radius * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                if (strokeColor) {
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = strokeWidth;
+                    ctx.stroke();
+                }
+            }
+            
+            // Schild zeichnen
+            function drawShield(x, y, radius, color) {
+                ctx.beginPath();
+                ctx.moveTo(x, y - radius/2);
+                ctx.lineTo(x + radius/1.5, y - radius/3);
+                ctx.lineTo(x + radius/1.5, y + radius/3);
+                ctx.arc(x, y + radius/3, radius/1.5, 0, Math.PI, true);
+                ctx.lineTo(x - radius/1.5, y - radius/3);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+            
+            // Schloss zeichnen
+            function drawLock(x, y, color) {
+                // Schloss-Körper
+                ctx.beginPath();
+                const lockWidth = 36;
+                const lockHeight = 22;
+                ctx.rect(x - lockWidth/2, y - 3, lockWidth, lockHeight);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // Schloss-Bügel
+                ctx.beginPath();
+                ctx.moveTo(x - 10, y - 3);
+                ctx.arc(x, y - 3, 10, Math.PI, 0, false);
+                ctx.lineTo(x + 10, y - 3);
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = color;
+                ctx.stroke();
+                
+                // Schlüsselloch
+                ctx.beginPath();
+                ctx.arc(x, y + 6, 4, 0, Math.PI * 2);
+                ctx.fillStyle = colors.shield;
+                ctx.fill();
+            }
+            
+            // Knotenpunkte zeichnen
+            function drawCircuitNodes() {
+                const nodePoints = [
+                    [75, 67], [165, 67], [75, 113], [165, 113], [120, 142],
+                    [115, 85], [125, 85], [110, 95], [130, 95], [110, 105], [130, 105]
+                ];
+                
+                nodePoints.forEach(point => {
+                    ctx.beginPath();
+                    ctx.arc(point[0], point[1], 2, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.fill();
+                });
+            }
+            
+            // Logo-Erstellung initialisieren
+            drawLogo();
+            
+            // Download-Handler
+            document.getElementById('downloadButton').addEventListener('click', function() {
+                const dataURL = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = 'logo.png';
+                link.href = dataURL;
+                link.click();
+            });
+        });
+    </script>
+</body>
+</html>
