@@ -1,0 +1,258 @@
+{% extends 'layout.html' %}
+
+{% block title %}CVE Details - {{ cve.cve_id if not from_api else cve.cve_id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">CVE Details</li>
+        </ol>
+    </nav>
+
+    <!-- CVE Header with ID and Severity -->
+    <div class="cve-header rounded shadow-sm">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-0">{{ cve.cve_id if not from_api else cve.cve_id }}</h1>
+            </div>
+            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                {% set severity = cve.severity if not from_api else cve.severity %}
+                {% if severity %}
+                <span class="badge severity-badge severity-{{ severity }}">
+                    {{ severity }}
+                </span>
+                {% else %}
+                <span class="badge severity-badge severity-UNKNOWN">UNKNOWN</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- CVE Information Column -->
+        <div class="col-lg-8">
+            <!-- Description Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">Description</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ cve.description if not from_api else cve.description }}</p>
+                </div>
+            </div>
+
+            <!-- CVSS Scores Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">CVSS Scores</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="cvss-meter mb-3">
+                                <h3 class="h6">CVSS v3 Score</h3>
+                                <div class="progress" style="height: 20px;">
+                                    {% set cvss_v3 = cve.cvss_v3_score if not from_api else cve.cvss_v3_score %}
+                                    {% if cvss_v3 %}
+                                    <div class="progress-bar cvss-bar" role="progressbar" 
+                                         style="width: {{ (cvss_v3 / 10) * 100 }}%;" 
+                                         aria-valuenow="{{ cvss_v3 }}" aria-valuemin="0" aria-valuemax="10">
+                                        {{ cvss_v3 }}
+                                    </div>
+                                    {% else %}
+                                    <div class="progress-bar bg-secondary" role="progressbar" style="width: 100%">
+                                        Not Available
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="cvss-meter mb-3">
+                                <h3 class="h6">CVSS v2 Score</h3>
+                                <div class="progress" style="height: 20px;">
+                                    {% set cvss_v2 = cve.cvss_v2_score if not from_api else cve.cvss_v2_score %}
+                                    {% if cvss_v2 %}
+                                    <div class="progress-bar cvss-bar" role="progressbar" 
+                                         style="width: {{ (cvss_v2 / 10) * 100 }}%;" 
+                                         aria-valuenow="{{ cvss_v2 }}" aria-valuemin="0" aria-valuemax="10">
+                                        {{ cvss_v2 }}
+                                    </div>
+                                    {% else %}
+                                    <div class="progress-bar bg-secondary" role="progressbar" style="width: 100%">
+                                        Not Available
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CPE Configurations Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Affected Configurations</h2>
+                    <button class="btn btn-sm btn-light" id="toggle-cpe">Show All</button>
+                </div>
+                <div class="card-body">
+                    {% if not from_api and cve.cpe_affected %}
+                        {% set cpe_list = cve.cpe_affected.split(',') %}
+                        <div class="cpe-list" id="cpe-list">
+                            {% for cpe in cpe_list[:5] %}
+                                <div class="cpe-item">{{ cpe }}</div>
+                            {% endfor %}
+                            
+                            {% if cpe_list|length > 5 %}
+                            <div class="cpe-hidden d-none">
+                                {% for cpe in cpe_list[5:] %}
+                                    <div class="cpe-item">{{ cpe }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="cpe-count text-muted small mb-2">
+                                + {{ cpe_list|length - 5 }} more configurations
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% elif from_api and cve.configurations %}
+                        <div class="cpe-list" id="cpe-list">
+                            <!-- Logic for API returned CPE configurations -->
+                            <!-- Just showing the first 5, rest are hidden initially -->
+                            <!-- This would need to be customized based on your API response structure -->
+                            <div class="alert alert-info">
+                                This CPE section should be implemented based on the structure of your API response.
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No CPE configuration data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Metadata Column -->
+        <div class="col-lg-4">
+            <!-- Dates Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h2 class="h5 mb-0">Publication Info</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Published:</span>
+                            <span>
+                                {% if not from_api and cve.published_date %}
+                                    {{ cve.published_date.strftime('%Y-%m-%d') }}
+                                {% elif from_api and cve.published_date %}
+                                    {{ cve.published_date }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>Last Modified:</span>
+                            <span>
+                                {% if not from_api and cve.last_modified_date %}
+                                    {{ cve.last_modified_date.strftime('%Y-%m-%d') }}
+                                {% elif from_api and cve.last_modified_date %}
+                                    {{ cve.last_modified_date }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>CWE ID:</span>
+                            <span>
+                                {% if cve.cwe_id %}
+                                    {{ cve.cwe_id }}
+                                {% else %}
+                                    Not Specified
+                                {% endif %}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- References Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h2 class="h5 mb-0">References</h2>
+                </div>
+                <div class="card-body">
+                    {% if not from_api and cve.references %}
+                        {% set ref_list = cve.references.split(',') %}
+                        {% if ref_list|length > 0 %}
+                            <div class="reference-container">
+                                {% for ref in ref_list %}
+                                    <a href="{{ ref }}" class="reference-link" target="_blank" rel="noopener">
+                                        {{ ref.replace('http://', '').replace('https://', '')[:30] }}...
+                                        <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No references available.</p>
+                        {% endif %}
+                    {% elif from_api and cve.references %}
+                        <!-- Logic for API returned references -->
+                        <div class="reference-container">
+                            <!-- This would need to be customized based on your API response structure -->
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No references available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Color the CVSS progress bars based on severity
+        const cvssBarElements = document.querySelectorAll('.cvss-bar');
+        cvssBarElements.forEach(bar => {
+            const score = parseFloat(bar.getAttribute('aria-valuenow'));
+            if (score >= 9.0) {
+                bar.classList.add('bg-danger');
+            } else if (score >= 7.0) {
+                bar.classList.add('bg-warning');
+                bar.classList.add('text-dark');
+            } else if (score >= 4.0) {
+                bar.classList.add('bg-info');
+                bar.classList.add('text-dark');
+            } else if (score > 0) {
+                bar.classList.add('bg-success');
+            }
+        });
+
+        // Toggle CPE configurations visibility
+        const toggleCpeBtn = document.getElementById('toggle-cpe');
+        const cpeHidden = document.querySelector('.cpe-hidden');
+        const cpeCount = document.querySelector('.cpe-count');
+        
+        if (toggleCpeBtn && cpeHidden && cpeCount) {
+            toggleCpeBtn.addEventListener('click', function() {
+                if (cpeHidden.classList.contains('d-none')) {
+                    cpeHidden.classList.remove('d-none');
+                    cpeCount.classList.add('d-none');
+                    toggleCpeBtn.textContent = 'Show Less';
+                } else {
+                    cpeHidden.classList.add('d-none');
+                    cpeCount.classList.remove('d-none');
+                    toggleCpeBtn.textContent = 'Show All';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

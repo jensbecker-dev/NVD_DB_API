@@ -1,0 +1,22 @@
+Directory Structure for CSS Troubleshooting:
+
+p:\DevEnv\NVD_DB_API\
+├── app.py                  # Main Flask application
+├── cve_database.db         # SQLite database 
+├── modules\                # Python modules
+│   └── nvdapi.py           # NVD API module
+├── static\                 # Static files folder
+│   └── css\                # CSS folder
+│       └── style.css       # Main CSS file
+└── templates\              # HTML templates
+    ├── index.html          # Main page template
+    ├── layout.html         # Base layout template (if used)
+    ├── cve_details.html    # CVE details template
+    ├── error.html          # Error page template
+    └── update_status.html  # Database update status template
+
+Important notes:
+1. Flask serves static files from the 'static' folder by default
+2. CSS should be linked in templates using: {{ url_for('static', filename='css/style.css') }}
+3. This structure assumes 'app.py' is in the root directory
+4. Make sure file permissions allow reading from these directories

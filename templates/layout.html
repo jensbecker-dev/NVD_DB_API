@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NVD CVE Database Explorer{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <!-- Fix the CSS link path with proper url_for -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --sidebar-width: 280px; /* Breitere Sidebar */
+            --primary-dark: #212529;
+            --accent-color: #0d6efd;
+        }
+        
+        body {
+            min-height: 100vh;
+            padding-left: 0;
+            background-color: #f8f9fa;
+            transition: padding-left 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-left: var(--sidebar-width);
+            }
+        }
+        
+        /* Logo Styling */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .logo-img {
+            width: 100%; /* Fill the entire sidebar width */
+            max-width: 200px; /* Maximum size control */
+            height: auto; /* Maintain aspect ratio */
+            transition: all 0.3s ease;
+            margin-bottom: 15px; /* More space below logo */
+            padding: 10px; /* Add padding around the logo */
+        }
+        
+        .logo-img:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+        
+        /* Sidebar Header improved styling */
+        .sidebar-header {
+            padding: 1.5rem 1rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background-color: rgba(0,0,0,0.25); /* Darker background for better contrast */
+        }
+        
+        .sidebar-header h2 {
+            color: white;
+            font-size: 1.2rem;
+            margin: 0.8rem 0 0 0;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-header a:hover h2 {
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar Styling */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            background-color: var(--primary-dark);
+            z-index: 1030;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar.show {
+            transform: translateX(0);
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+        }
+        
+        .sidebar .list-group-item {
+            background-color: transparent;
+            color: rgba(255, 255, 255, 0.85);
+            border: none;
+            border-radius: 0;
+            padding: 0.8rem 1rem;
+            font-size: 0.95rem;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .sidebar .list-group-item:hover,
+        .sidebar .list-group-item:focus {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-left-color: var(--accent-color);
+            transform: translateX(5px);
+        }
+        
+        /* Active state styling for sidebar links */
+        .sidebar .list-group-item.active {
+            background-color: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            border-left-color: var(--accent-color);
+            font-weight: 500;
+        }
+        
+        .sidebar .section-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            padding: 1rem 1rem 0.5rem;
+            margin: 0;
+        }
+        
+        .sidebar-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1050;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+            border: none;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        
+        .sidebar-toggle:hover {
+            background-color: var(--primary-dark);
+            transform: scale(1.1);
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        
+        /* Main Content Container */
+        .main-container {
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            .logo-img {
+                width: 80%; /* Slightly smaller on mobile */
+                max-width: 150px;
+            }
+            
+            .sidebar-header h2 {
+                font-size: 1rem;
+            }
+        }
+        
+        @media (min-width: 992px) {
+            .logo-img {
+                padding: 15px; /* More padding on larger screens */
+            }
+        }
+        
+        /* Improve hover effects on all interactive elements */
+        a, button, .btn {
+            transition: all 0.2s ease-in-out !important;
+        }
+        
+        a:hover, button:hover, .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .card {
+            transition: all 0.25s ease-in-out;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <!-- Logo Header -->
+        <div class="sidebar-header">
+            <a href="{{ url_for('index') }}" class="text-decoration-none d-block text-center">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="NVD CVE Database" class="logo-img">
+                <h2>NVD CVE Explorer</h2>
+            </a>
+        </div>
+        
+        <!-- All Menu Items Consolidated -->
+        <h5 class="section-title"><i class="bi bi-house-door me-2"></i>Home</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action {% if request.path == url_for('index') %}active{% endif %}">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </a>
+            <a href="{{ url_for('view_all_entries') }}" class="list-group-item list-group-item-action {% if request.path == url_for('view_all_entries') %}active{% endif %}">
+                <i class="bi bi-list-ul me-2"></i>All CVEs
+            </a>
+        </div>
+        
+        <h5 class="section-title"><i class="bi bi-bug me-2"></i>Vulnerability</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('vulnerability_category', category='sql-injection') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='sql-injection') %}active{% endif %}">
+                <i class="bi bi-database me-2"></i>SQL Injection
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='remote-code-execution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='remote-code-execution') %}active{% endif %}">
+                <i class="bi bi-code-slash me-2"></i>Remote Code Execution
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='cross-site-scripting') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='cross-site-scripting') %}active{% endif %}">
+                <i class="bi bi-braces me-2"></i>Cross-Site Scripting
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='authentication-bypass') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='authentication-bypass') %}active{% endif %}">
+                <i class="bi bi-shield-x me-2"></i>Authentication Bypass
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='denial-of-service') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='denial-of-service') %}active{% endif %}">
+                <i class="bi bi-exclamation-triangle me-2"></i>Denial of Service
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='information-disclosure') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='information-disclosure') %}active{% endif %}">
+                <i class="bi bi-info-circle me-2"></i>Information Disclosure
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='buffer-overflow') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='buffer-overflow') %}active{% endif %}">
+                <i class="bi bi-hdd-stack me-2"></i>Buffer Overflow
+            </a>
+        </div>
+        
+        <h5 class="section-title"><i class="bi bi-graph-up me-2"></i>Analysis</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('monthly_summary') }}" class="list-group-item list-group-item-action {% if request.path == url_for('monthly_summary') %}active{% endif %}">
+                <i class="bi bi-calendar3-week me-2"></i>Monthly Summary
+            </a>
+            <a href="{{ url_for('severity_distribution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('severity_distribution') %}active{% endif %}">
+                <i class="bi bi-pie-chart me-2"></i>Severity Distribution
+            </a>
+            <a href="{{ url_for('vendor_analysis') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vendor_analysis') %}active{% endif %}">
+                <i class="bi bi-building me-2"></i>Vendor Analysis
+            </a>
+            <a href="{{ url_for('top_vendors') }}" class="list-group-item list-group-item-action {% if request.path == url_for('top_vendors') %}active{% endif %}">
+                <i class="bi bi-award me-2"></i>Top Vendors
+            </a>
+        </div>
+        
+        <h5 class="section-title"><i class="bi bi-gear me-2"></i>Administration</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('update_database') }}" class="list-group-item list-group-item-action {% if request.path == url_for('update_database') %}active{% endif %}">
+                <i class="bi bi-arrow-repeat me-2"></i>Update Database
+            </a>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Toggle Button -->
+    <button class="sidebar-toggle d-md-none" id="sidebarToggle">
+        <i class="bi bi-list"></i>
+    </button>
+    
+    <!-- Main Content -->
+    <div class="main-container">
+        {% block content %}{% endblock %}
+        
+        <footer class="mt-5 pt-4 border-top text-muted">
+            <p class="small">&copy; {{ now().year }} NVD CVE Database Explorer</p>
+        </footer>
+    </div>
+    
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+                
+                // Close sidebar when clicking outside on mobile
+                document.addEventListener('click', function(event) {
+                    const isMobile = window.innerWidth < 768;
+                    if (isMobile && sidebar.classList.contains('show')) {
+                        // Check if the click was outside the sidebar and not on the toggle button
+                        if (!sidebar.contains(event.target) && event.target !== sidebarToggle) {
+                            sidebar.classList.remove('show');
+                        }
+                    }
+                });
+                
+                // Handle touch swipe to open/close sidebar on mobile
+                let touchStartX = 0;
+                let touchEndX = 0;
+                
+                document.addEventListener('touchstart', function(event) {
+                    touchStartX = event.changedTouches[0].screenX;
+                }, false);
+                
+                document.addEventListener('touchend', function(event) {
+                    touchEndX = event.changedTouches[0].screenX;
+                    handleSwipe();
+                }, false);
+                
+                function handleSwipe() {
+                    const isMobile = window.innerWidth < 768;
+                    if (!isMobile) return;
+                    
+                    const swipeDistance = touchEndX - touchStartX;
+                    const threshold = 100; // Minimum distance to consider it a swipe
+                    
+                    // Swipe right to open
+                    if (swipeDistance > threshold && !sidebar.classList.contains('show')) {
+                        sidebar.classList.add('show');
+                    }
+                    // Swipe left to close
+                    else if (swipeDistance < -threshold && sidebar.classList.contains('show')) {
+                        sidebar.classList.remove('show');
+                    }
+                }
+            }
+            
+            // Ensure consistent active link highlighting across all pages
+            // This additional script ensures the active link is highlighted even for dynamic routes
+            const currentPath = window.location.pathname;
+            const sidebarLinks = document.querySelectorAll('.sidebar .list-group-item');
+            
+            sidebarLinks.forEach(link => {
+                // For exact matches
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+                // For partial matches (like dynamic routes)
+                else if (currentPath.includes('vulnerability_category') && 
+                         link.getAttribute('href').includes('vulnerability_category')) {
+                    
+                    // Extract category from URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentCategory = currentPath.split('/').pop();
+                    
+                    // Compare with link href
+                    if (link.getAttribute('href').includes(currentCategory)) {
+                        link.classList.add('active');
+                    }
+                }
+                // For vendor_detail pages
+                else if (currentPath.includes('vendor_detail') && 
+                         link.getAttribute('href').includes('vendor_analysis')) {
+                    link.classList.add('active');
+                }
+                // For CVE details pages
+                else if (currentPath.includes('cve_details') && 
+                         (link.getAttribute('href') === '/' || link.getAttribute('href').includes('view_all_entries'))) {
+                    // Don't add active for these, as they're not direct parents
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

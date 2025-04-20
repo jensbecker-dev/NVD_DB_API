@@ -1,0 +1,150 @@
+{% extends "layout.html" %}
+
+{% block title %}Database Update Status{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item active">Database Update Status</li>
+        </ol>
+    </nav>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2"><i class="bi bi-arrow-repeat me-2 text-primary"></i>Database Update Status</h1>
+        <span class="badge bg-primary p-2">{{ now().strftime('%Y-%m-%d %H:%M') }}</span>
+    </div>
+    
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h4 mb-0">Update Progress</h2>
+        </div>
+        <div class="card-body">
+            {% if status.is_updating %}
+                <div class="alert alert-info">
+                    <i class="bi bi-arrow-clockwise me-2"></i>
+                    <span id="updateMessage">Database update is in progress. This may take several minutes...</span>
+                </div>
+                
+                <div class="progress mb-4" style="height: 25px;">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: {{ status.progress }}%;" 
+                         aria-valuenow="{{ status.progress }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ status.progress }}%
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between text-muted mb-3">
+                    <div id="currentYearInfo">
+                        {% if status.current_year %}
+                            <i class="bi bi-calendar2-event me-1"></i> Processing year: <strong>{{ status.current_year }}</strong>
+                        {% else %}
+                            <i class="bi bi-hourglass-split me-1"></i> Initializing...
+                        {% endif %}
+                    </div>
+                    <div>
+                        <i class="bi bi-database-add me-1"></i> New CVEs added: <strong id="cveAddedCount">{{ status.cves_added }}</strong>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Please do not close this browser window while the update is in progress</p>
+                </div>
+                
+                <script>
+                    // Refresh status every 3 seconds
+                    setInterval(function() {
+                        fetch('{{ url_for("check_update_status") }}')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Update progress bar
+                            document.getElementById('progressBar').style.width = data.progress + '%';
+                            document.getElementById('progressBar').setAttribute('aria-valuenow', data.progress);
+                            document.getElementById('progressBar').textContent = data.progress + '%';
+                            
+                            // Update current year
+                            if (data.current_year) {
+                                document.getElementById('currentYearInfo').innerHTML = 
+                                    '<i class="bi bi-calendar2-event me-1"></i> Processing year: <strong>' + 
+                                    data.current_year + '</strong>';
+                            }
+                            
+                            // Update CVEs added
+                            document.getElementById('cveAddedCount').textContent = data.cves_added;
+                            
+                            // Check if update is complete
+                            if (!data.is_updating) {
+                                if (data.error) {
+                                    document.getElementById('updateMessage').innerHTML = 
+                                        '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
+                                        'An error occurred during the update: ' + data.error;
+                                } else {
+                                    // Redirect to success page or reload
+                                    window.location.reload();
+                                }
+                            }
+                        })
+                        .catch(error => console.error('Error fetching update status:', error));
+                    }, 3000);
+                </script>
+            {% else %}
+                {% if status.error %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        An error occurred during the database update:
+                        <hr>
+                        <pre class="mb-0">{{ status.error }}</pre>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('update_database') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-repeat me-2"></i>Try Again
+                        </a>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">
+                            <i class="bi bi-house-door me-2"></i>Return to Dashboard
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Database update completed successfully!
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="bi bi-info-circle me-2"></i>Update Summary</h5>
+                            <div class="row mt-4">
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="h1 mb-2">{{ status.cves_added }}</div>
+                                    <div class="text-muted">New CVEs Added</div>
+                                </div>
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="h1 mb-2">{{ now().strftime('%Y-%m-%d') }}</div>
+                                    <div class="text-muted">Update Date</div>
+                                </div>
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="h1 mb-2">100%</div>
+                                    <div class="text-muted">Completed</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="bi bi-house-door me-2"></i>Return to Dashboard
+                        </a>
+                        <a href="{{ url_for('view_all_entries') }}" class="btn btn-outline-primary ms-2">
+                            <i class="bi bi-list-ul me-2"></i>View All CVEs
+                        </a>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

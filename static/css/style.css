@@ -1,0 +1,380 @@
+/* style.css */
+
+/* Color Variables - Security Theme */
+:root {
+    --primary-dark: #1a2b47;    /* Dark navy blue - primary dark tone */
+    --primary: #2c4b82;         /* Navy blue - main brand color */
+    --primary-light: #4a6da8;   /* Light blue - softer primary */
+    --secondary: #475b74;       /* Slate blue - complementary color */
+    --light-bg: #f0f2f5;        /* Light gray blue - background */
+    --white: #ffffff;           /* Pure white */
+    --text-dark: #25293b;       /* Near black with blue tint - main text */
+    --text-muted: #6c7793;      /* Muted blue gray - secondary text */
+    --border-color: #d2d8e2;    /* Light blue gray - borders */
+    
+    /* Alert Colors - Security Context */
+    --critical: #c91c24;        /* Vibrant red for critical security issues */
+    --high: #e85600;            /* Deep orange for high severity */
+    --medium: #f0b400;          /* Amber for medium severity */
+    --low: #2c9c5a;             /* Green for low severity */
+    --info: #3b7ea1;            /* Blue for informational items */
+    --unknown: #6b7280;         /* Neutral gray for unknown severity */
+}
+
+/* Body and General Layout */
+body {
+    background-color: var(--light-bg);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-dark);
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+    overflow: hidden;
+    padding: 20px;
+}
+
+/* Card Styling */
+.card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(27, 39, 65, 0.08);
+    border-radius: 6px;
+}
+
+.card-header {
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border-color);
+    padding: 15px 20px;
+    font-weight: 600;
+}
+
+/* Feature Cards */
+.feature-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    height: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--white);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(27, 39, 65, 0.12);
+}
+
+/* Table Styling */
+.table-hover tbody tr:hover {
+    background-color: rgba(44, 75, 130, 0.05);
+}
+
+.table th {
+    font-weight: 600;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary-light);
+}
+
+.table td {
+    border-color: var(--border-color);
+}
+
+/* Badge Customization (Severity Colors) */
+.badge {
+    padding: 5px 10px;
+    font-weight: 600;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+
+.badge.severity-critical {
+    background-color: var(--critical) !important;
+    color: var(--white) !important;
+}
+
+.badge.severity-high {
+    background-color: var(--high) !important;
+    color: var(--white) !important;
+}
+
+.badge.severity-medium {
+    background-color: var(--medium) !important;
+    color: var(--text-dark) !important;
+}
+
+.badge.severity-low {
+    background-color: var(--low) !important;
+    color: var(--white) !important;
+}
+
+.badge.severity-unknown {
+    background-color: var(--unknown) !important;
+    color: var(--white) !important;
+}
+
+.badge.severity-info {
+    background-color: var(--info) !important;
+    color: var(--white) !important;
+}
+
+/* Background colors with appropriate text contrast */
+.bg-dark, .bg-secondary, .bg-primary, .bg-danger, .bg-warning {
+    color: var(--white) !important;
+}
+
+.bg-light, .bg-white, .bg-info {
+    color: var(--text-dark) !important;
+}
+
+/* CVE Details Page Specifics */
+.cve-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: var(--white);
+    border-radius: 6px 6px 0 0;
+    padding: 20px;
+}
+
+.cve-header h1 {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.source-tag {
+    font-size: 0.75rem;
+    background-color: var(--primary-light);
+    color: var(--white);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Database overview styles - Enhanced */
+.database-overview {
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(27, 39, 65, 0.08);
+    border-top: 3px solid var(--primary);
+}
+
+.database-overview h2 {
+    color: var(--primary-dark);
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+    font-weight: 600;
+}
+
+.database-overview p {
+    color: var(--text-dark);
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.severity-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.severity-item {
+    background-color: var(--white);
+    border-left: 4px solid var(--border-color);
+    padding: 15px 20px;
+    flex: 1 0 45%;
+    min-width: 200px;
+    border-radius: 4px;
+    color: var(--text-dark);
+    box-shadow: 0 2px 4px rgba(27, 39, 65, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.severity-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(27, 39, 65, 0.08);
+}
+
+.severity-item.critical {
+    border-left-color: var(--critical);
+}
+
+.severity-item.high {
+    border-left-color: var(--high);
+}
+
+.severity-item.medium {
+    border-left-color: var(--medium);
+}
+
+.severity-item.low {
+    border-left-color: var(--low);
+}
+
+.severity-item.unknown {
+    border-left-color: var(--unknown);
+}
+
+.severity-count {
+    font-weight: bold;
+    float: right;
+    font-size: 1.1rem;
+    color: var(--primary-dark);
+}
+
+/* Search Section Styling */
+.search-section {
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(27, 39, 65, 0.08);
+}
+
+.search-section h2 {
+    color: var(--primary-dark);
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.search-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.search-box input[type="text"] {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.search-box input[type="text"]:focus {
+    border-color: var(--primary-light);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(44, 75, 130, 0.1);
+}
+
+.search-box button {
+    padding: 10px 20px;
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.search-box button:hover {
+    background-color: var(--primary-dark);
+}
+
+/* Results Section Styling */
+.results-section {
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(27, 39, 65, 0.08);
+}
+
+.results-section h2 {
+    color: var(--primary-dark);
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.cve-item {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: var(--white);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cve-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(27, 39, 65, 0.08);
+}
+
+.cve-item h3 {
+    margin-top: 0;
+    color: var(--primary);
+}
+
+.cve-item h3 a {
+    text-decoration: none;
+    color: var(--primary);
+}
+
+.cve-item h3 a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Footer */
+footer {
+    margin-top: 30px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+}
+
+footer a {
+    text-decoration: none;
+    color: var(--primary-light);
+}
+
+footer a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .container {
+        width: 90%;
+    }
+    
+    .severity-item {
+        flex: 1 0 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+    }
+    
+    .display-4 {
+        font-size: 2.5rem;
+    }
+    
+    .search-box {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    .card-header, .card-body {
+        padding: 15px;
+    }
+}

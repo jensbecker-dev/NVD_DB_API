@@ -1,0 +1,132 @@
+{% extends "layout.html" %}
+
+{% block title %}Search CVEs{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h2 mb-0 text-gray-800">
+            <i class="bi bi-search me-2 text-primary"></i>Search Vulnerabilities
+        </h1>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 text-primary"><i class="bi bi-search me-2"></i>Basic Search</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('search') }}" method="post" class="mb-4">
+                        <div class="mb-3">
+                            <label for="search_term" class="form-label">Search Term:</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-keyboard"></i></span>
+                                <input type="text" class="form-control" id="search_term" name="search_term" 
+                                    placeholder="CVE ID, keyword, or vendor name" required>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-search me-1"></i>Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+                        <div>
+                            <h5 class="alert-heading">Search Tips</h5>
+                            <ul class="mb-0">
+                                <li>Enter a CVE ID (e.g., CVE-2021-44228) for specific vulnerability details</li>
+                                <li>Search by keyword (e.g., log4j, apache) to find related vulnerabilities</li>
+                                <li>Results will show matched vulnerabilities from the local database or the NVD API</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 text-primary"><i class="bi bi-sliders me-2"></i>Advanced Search</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('search') }}" method="post">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="keyword" class="form-label">Keyword:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                    <input type="text" class="form-control" id="keyword" name="keyword" 
+                                        placeholder="e.g., buffer overflow, XSS">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="vendor" class="form-label">Vendor:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <input type="text" class="form-control" id="vendor" name="vendor" 
+                                        placeholder="e.g., Microsoft, Apache">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="severity" class="form-label">Severity:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-exclamation-diamond"></i></span>
+                                    <select class="form-select" id="severity" name="severity">
+                                        <option value="">Any severity</option>
+                                        <option value="CRITICAL">Critical</option>
+                                        <option value="HIGH">High</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="LOW">Low</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date_range" class="form-label">Published:</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-calendar-range"></i></span>
+                                    <select class="form-select" id="date_range" name="date_range">
+                                        <option value="">Any time</option>
+                                        <option value="last_7_days">Last 7 days</option>
+                                        <option value="last_30_days">Last 30 days</option>
+                                        <option value="last_90_days">Last 90 days</option>
+                                        <option value="last_year">Last year</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label d-block">Options:</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="exploitable" name="exploitable" value="true">
+                                <label class="form-check-label" for="exploitable">
+                                    <i class="bi bi-bug me-1 text-danger"></i>Potentially exploitable
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="has_patch" name="has_patch" value="true">
+                                <label class="form-check-label" for="has_patch">
+                                    <i class="bi bi-shield-check me-1 text-success"></i>Has patch available
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="reset" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle me-1"></i>Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

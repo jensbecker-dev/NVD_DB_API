@@ -1,0 +1,409 @@
+{% extends "layout.html" %}
+
+{% block title %}Vendor: {{ vendor_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+    }
+    
+    .vendor-header {
+        background-color: #f8f9fa;
+        border-left: 5px solid #0d6efd;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    
+    .vendor-stat-card {
+        transition: transform 0.2s;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .vendor-stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .severity-badge {
+        font-weight: normal;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.5rem;
+    }
+    
+    .product-item {
+        transition: transform 0.2s;
+    }
+    
+    .product-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .stat-critical { background-color: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    .stat-high { background-color: rgba(253, 126, 20, 0.1); color: #fd7e14; }
+    .stat-medium { background-color: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .stat-low { background-color: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mt-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('top_vendors') }}">Top Vendors</a></li>
+            <li class="breadcrumb-item active">{{ vendor_name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Vendor Header -->
+    <div class="vendor-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1>{{ vendor_name }}</h1>
+            <p class="text-muted mb-0">Vulnerability Analysis</p>
+        </div>
+        <div class="text-end">
+            <span class="d-block fs-4">{{ total_cves }} CVEs</span>
+            <div class="mt-2">
+                <span class="badge rounded-pill badge-critical">{{ severity_counts.CRITICAL }} Critical</span>
+                <span class="badge rounded-pill badge-high">{{ severity_counts.HIGH }} High</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card vendor-stat-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Severity Breakdown</h5>
+                    <div class="chart-container" style="height: 220px;">
+                        <canvas id="severityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card vendor-stat-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Risk Assessment</h5>
+                    <div class="mt-3">
+                        <h6>Vulnerability Risk Level</h6>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-danger" role="progressbar" 
+                                 style="width: {{ risk_score }}%;" 
+                                 aria-valuenow="{{ risk_score }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ risk_score }}%
+                            </div>
+                        </div>
+                        <div class="small text-muted mb-3">Based on severity distribution and total CVE count</div>
+                        
+                        <h6>Most Common Issue Types</h6>
+                        <div class="d-flex flex-column gap-2">
+                            {% for issue in top_issues %}
+                            <div class="d-flex justify-content-between">
+                                <div>{{ issue.name }}</div>
+                                <div>{{ issue.count }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card vendor-stat-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Yearly Trend</h5>
+                    <div class="chart-container" style="height: 220px;">
+                        <canvas id="yearlyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Affected Products -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Top Affected Products</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for product in top_products %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card product-item h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="text-muted">{{ product.cve_count }} CVEs</p>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                {% if product.critical > 0 %}
+                                <span class="stat-item stat-critical px-2 py-1 rounded">{{ product.critical }} Critical</span>
+                                {% endif %}
+                                {% if product.high > 0 %}
+                                <span class="stat-item stat-high px-2 py-1 rounded">{{ product.high }} High</span>
+                                {% endif %}
+                            </div>
+                            <a href="{{ url_for('index', search_term=vendor_name + ' ' + product.name) }}" class="btn btn-sm btn-outline-primary">View CVEs</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- CVE Listing -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">Recent CVEs</h2>
+            <a href="{{ url_for('index', search_term=vendor_name) }}" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="cveTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>CVE ID</th>
+                            <th>Severity</th>
+                            <th>Description</th>
+                            <th>Published</th>
+                            <th>CVSS Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cve in paginated_cves %}
+                        <tr>
+                            <td><a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}">{{ cve.cve_id }}</a></td>
+                            <td>
+                                {% if cve.severity == 'CRITICAL' %}
+                                <span class="badge rounded-pill badge-critical">Critical</span>
+                                {% elif cve.severity == 'HIGH' %}
+                                <span class="badge rounded-pill badge-high">High</span>
+                                {% elif cve.severity == 'MEDIUM' %}
+                                <span class="badge rounded-pill badge-medium">Medium</span>
+                                {% elif cve.severity == 'LOW' %}
+                                <span class="badge rounded-pill badge-low">Low</span>
+                                {% else %}
+                                <span class="badge rounded-pill badge-unknown">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ cve.description[:150] }}{% if cve.description|length > 150 %}...{% endif %}</td>
+                            <td>{{ cve.published_date.strftime('%Y-%m-%d') if cve.published_date else 'Unknown' }}</td>
+                            <td>
+                                {% if cve.cvss_v3_score %}
+                                <span class="badge rounded-pill bg-dark">V3: {{ cve.cvss_v3_score }}</span>
+                                {% elif cve.cvss_v2_score %}
+                                <span class="badge rounded-pill bg-secondary">V2: {{ cve.cvss_v2_score }}</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if total_pages and total_pages > 1 %}
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Showing {{ (current_page - 1) * per_page + 1 }} to {{ [current_page * per_page, total_cves]|min }} of {{ total_cves }} entries
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <!-- Previous page -->
+                        {% if current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('vendor_detail', vendor=vendor, page=current_page-1) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Page numbers -->
+                        {% set start_page = [current_page - 2, 1]|max %}
+                        {% set end_page = [start_page + 4, total_pages]|min %}
+                        {% set start_page = [end_page - 4, 1]|max %}
+                        
+                        {% for page_num in range(start_page, end_page + 1) %}
+                        <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('vendor_detail', vendor=vendor, page=page_num) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                        
+                        <!-- Next page -->
+                        {% if current_page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('vendor_detail', vendor=vendor, page=current_page+1) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Similar Vendors -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Similar Vendors</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for vendor in similar_vendors %}
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ vendor.name }}</h5>
+                            <p class="text-muted">{{ vendor.cve_count }} CVEs</p>
+                            <a href="{{ url_for('vendor_detail', vendor=vendor.slug) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Colors for charts
+    const colors = {
+        critical: '#dc3545',
+        high: '#fd7e14',
+        medium: '#ffc107',
+        low: '#0dcaf0',
+        unknown: '#6c757d',
+        primary: 'rgba(13, 110, 253, 0.8)',
+        primaryBorder: 'rgba(13, 110, 253, 1)'
+    };
+    
+    // Severity pie chart
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    new Chart(severityCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low', 'Unknown'],
+            datasets: [{
+                data: [
+                    {{ severity_counts.CRITICAL }},
+                    {{ severity_counts.HIGH }},
+                    {{ severity_counts.MEDIUM }},
+                    {{ severity_counts.LOW }},
+                    {{ severity_counts.UNKNOWN }}
+                ],
+                backgroundColor: [
+                    colors.critical,
+                    colors.high,
+                    colors.medium,
+                    colors.low,
+                    colors.unknown
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Severity Distribution',
+                    font: {
+                        size: 13
+                    }
+                }
+            }
+        }
+    });
+    
+    // Yearly trend chart
+    const yearlyCtx = document.getElementById('yearlyTrendChart').getContext('2d');
+    new Chart(yearlyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ yearly_labels|tojson }},
+            datasets: [{
+                label: 'CVEs',
+                data: {{ yearly_counts|tojson }},
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderColor: colors.primaryBorder,
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'CVEs by Year',
+                    font: {
+                        size: 13
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,456 @@
+{% extends "layout.html" %}
+
+{% block title %}Monthly CVE Summary{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+    
+    .monthly-card {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .monthly-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    
+    .month-row {
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+    
+    .month-row:hover {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    
+    .month-badge {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border-radius: 50%;
+        color: white;
+        background-color: #0d6efd;
+        font-size: 1.2rem;
+    }
+    
+    .trend-indicator {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        margin-left: 5px;
+        vertical-align: middle;
+    }
+    
+    .trend-up {
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 10px solid #dc3545;
+    }
+    
+    .trend-down {
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 10px solid #198754;
+    }
+    
+    .trend-neutral {
+        width: 10px;
+        height: 10px;
+        background-color: #6c757d;
+        border-radius: 50%;
+    }
+    
+    .year-tabs .nav-link {
+        border-radius: 0;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+    }
+    
+    .year-tabs .nav-link.active {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        border-bottom: 3px solid #0d6efd;
+    }
+    
+    .severity-badge {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    .severity-critical { background-color: #dc3545; }
+    .severity-high { background-color: #fd7e14; }
+    .severity-medium { background-color: #ffc107; }
+    .severity-low { background-color: #0dcaf0; }
+    .severity-unknown { background-color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Monthly Summary</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2"><i class="bi bi-calendar3-week me-2 text-primary"></i>Monthly CVE Summary</h1>
+        <div class="d-flex">
+            <select id="yearSelector" class="form-select me-2" aria-label="Year selection">
+                {% for year in years %}
+                <option value="{{ year }}" {% if year == most_recent_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Monthly Trend Chart -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">Monthly CVE Publication Trend</h2>
+            <span class="badge bg-primary">{{ most_recent_year }}</span>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Data Table -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Monthly Breakdown</h2>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-center">Total CVEs</th>
+                            <th class="text-center">Critical</th>
+                            <th class="text-center">High</th>
+                            <th class="text-center">Medium</th>
+                            <th class="text-center">Low</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyDataBody">
+                        {% for month_num in range(12, 0, -1) %}
+                        <tr class="month-row" data-month="{{ month_num }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="month-badge me-3">{{ month_num }}</div>
+                                    <div>{{ month_names[month_num-1] }}</div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-bold">{{ monthly_data[most_recent_year][month_num]['count'] }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-danger">{{ monthly_data[most_recent_year][month_num]['critical'] }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-warning text-dark">{{ monthly_data[most_recent_year][month_num]['high'] }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-info text-dark">{{ monthly_data[most_recent_year][month_num]['medium'] }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-light text-dark border">{{ monthly_data[most_recent_year][month_num]['low'] }}</span>
+                            </td>
+                            <td>
+                                {% set prev_month = month_num - 1 if month_num > 1 else 12 %}
+                                {% set prev_year = most_recent_year if month_num > 1 else most_recent_year - 1 %}
+                                {% set current_count = monthly_data[most_recent_year][month_num]['count'] %}
+                                
+                                {% if prev_year in monthly_data and prev_month in monthly_data[prev_year] %}
+                                    {% set prev_count = monthly_data[prev_year][prev_month]['count'] %}
+                                    {% if current_count > prev_count and prev_count > 0 %}
+                                        <span class="text-danger">
+                                            <div class="trend-indicator trend-up"></div>
+                                            {{ ((current_count - prev_count) / prev_count * 100)|round|int }}% increase
+                                        </span>
+                                    {% elif current_count < prev_count and current_count > 0 %}
+                                        <span class="text-success">
+                                            <div class="trend-indicator trend-down"></div>
+                                            {{ ((prev_count - current_count) / prev_count * 100)|round|int }}% decrease
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <div class="trend-indicator trend-neutral"></div>
+                                            No change
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No previous data</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yearly Comparison -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Year-over-Year Comparison</h2>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="yearComparisonChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Severity Distribution -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Severity Distribution for {{ most_recent_year }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <canvas id="severityPieChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Key Findings</h3>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><div class="severity-badge severity-critical"></div> Critical vulnerabilities</span>
+                                {% set critical_sum = 0 %}
+                                {% for month in range(1, 13) %}
+                                    {% set critical_sum = critical_sum + monthly_data[most_recent_year][month]['critical'] %}
+                                {% endfor %}
+                                <span class="badge rounded-pill bg-danger">{{ critical_sum }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><div class="severity-badge severity-high"></div> High severity vulnerabilities</span>
+                                {% set high_sum = 0 %}
+                                {% for month in range(1, 13) %}
+                                    {% set high_sum = high_sum + monthly_data[most_recent_year][month]['high'] %}
+                                {% endfor %}
+                                <span class="badge rounded-pill bg-warning text-dark">{{ high_sum }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><div class="severity-badge severity-medium"></div> Medium severity vulnerabilities</span>
+                                {% set medium_sum = 0 %}
+                                {% for month in range(1, 13) %}
+                                    {% set medium_sum = medium_sum + monthly_data[most_recent_year][month]['medium'] %}
+                                {% endfor %}
+                                <span class="badge rounded-pill bg-info text-dark">{{ medium_sum }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><div class="severity-badge severity-low"></div> Low severity vulnerabilities</span>
+                                {% set low_sum = 0 %}
+                                {% for month in range(1, 13) %}
+                                    {% set low_sum = low_sum + monthly_data[most_recent_year][month]['low'] %}
+                                {% endfor %}
+                                <span class="badge rounded-pill bg-light text-dark border">{{ low_sum }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart colors
+    const colors = {
+        primary: '#0d6efd',
+        primaryLight: 'rgba(13, 110, 253, 0.2)',
+        critical: '#dc3545',
+        criticalLight: 'rgba(220, 53, 69, 0.2)',
+        high: '#fd7e14',
+        medium: '#ffc107',
+        low: '#0dcaf0',
+        unknown: '#6c757d'
+    };
+    
+    // Monthly trend chart
+    const trendCtx = document.getElementById('monthlyTrendChart').getContext('2d');
+    const trendChart = new Chart(trendCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_months|tojson }},
+            datasets: [{
+                label: 'Total CVEs',
+                data: {{ chart_data|tojson }},
+                backgroundColor: colors.primaryLight,
+                borderColor: colors.primary,
+                borderWidth: 1
+            }, {
+                label: 'Critical CVEs',
+                data: {{ critical_data|tojson }},
+                backgroundColor: colors.criticalLight,
+                borderColor: colors.critical,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly CVE Publications',
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            }
+        }
+    });
+    
+    // Year selector functionality
+    const yearSelector = document.getElementById('yearSelector');
+    if (yearSelector) {
+        yearSelector.addEventListener('change', function() {
+            const selectedYear = this.value;
+            window.location.href = `{{ url_for('monthly_summary') }}?year=${selectedYear}`;
+        });
+    }
+    
+    // Calculate yearly severity totals for pie chart
+    let criticalTotal = 0;
+    let highTotal = 0;
+    let mediumTotal = 0;
+    let lowTotal = 0;
+    let unknownTotal = 0;
+    
+    {% for month in range(1, 13) %}
+        criticalTotal += {{ monthly_data[most_recent_year][month]['critical'] }};
+        highTotal += {{ monthly_data[most_recent_year][month]['high'] }};
+        mediumTotal += {{ monthly_data[most_recent_year][month]['medium'] }};
+        lowTotal += {{ monthly_data[most_recent_year][month]['low'] }};
+        unknownTotal += {{ monthly_data[most_recent_year][month]['unknown'] }};
+    {% endfor %}
+    
+    // Severity pie chart
+    const pieCtx = document.getElementById('severityPieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low', 'Unknown'],
+            datasets: [{
+                data: [criticalTotal, highTotal, mediumTotal, lowTotal, unknownTotal],
+                backgroundColor: [
+                    colors.critical,
+                    colors.high,
+                    colors.medium,
+                    colors.low,
+                    colors.unknown
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                title: {
+                    display: true,
+                    text: 'Severity Distribution',
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            }
+        }
+    });
+    
+    // Prepare data for year comparison chart
+    const years = {{ years|tojson }};
+    const yearlyData = [];
+    
+    for (const year of years) {
+        const yearData = [];
+        {% for month in range(1, 13) %}
+            yearData.push(
+                {% if '{{year}}' in monthly_data and month in monthly_data[year] %}
+                    {{ monthly_data[year][month]['count'] }}
+                {% else %}
+                    0
+                {% endif %}
+            );
+        {% endfor %}
+        
+        yearlyData.push({
+            label: year.toString(),
+            data: yearData,
+            borderColor: `hsl(${210 + (years.indexOf(year) * 40)}, 70%, 50%)`,
+            backgroundColor: `hsla(${210 + (years.indexOf(year) * 40)}, 70%, 50%, 0.1)`,
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false
+        });
+    }
+    
+    // Year comparison chart
+    const comparisonCtx = document.getElementById('yearComparisonChart').getContext('2d');
+    new Chart(comparisonCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: yearlyData.reverse().slice(0, 5) // Show only the last 5 years
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Year-over-Year Comparison',
+                    padding: {
+                        top: 10,
+                        bottom: 20
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

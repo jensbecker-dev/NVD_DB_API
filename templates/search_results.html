@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h2 mb-0 text-gray-800">
+            <i class="bi bi-search text-primary me-2"></i>Search Results
+        </h1>
+        <span class="badge bg-info p-2 fs-6">Found {{ results|length }} result(s)</span>
+    </div>
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Search term: <strong>{{ search_term }}</strong></h5>
+                <a href="{{ url_for('search') }}" class="btn btn-sm btn-light">
+                    <i class="bi bi-search me-1"></i>New Search
+                </a>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>CVE ID</th>
+                                <th>Description</th>
+                                <th>CVSS Score</th>
+                                <th>Severity</th>
+                                <th>Published Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cve in results %}
+                            <tr>
+                                <td><strong>{{ cve.cve_id }}</strong></td>
+                                <td>{{ cve.description[:100] }}{% if cve.description|length > 100 %}...{% endif %}</td>
+                                <td>
+                                    {% if cve.cvss_v3_score %}
+                                        <span class="badge bg-primary">V3: {{ cve.cvss_v3_score }}</span>
+                                    {% endif %}
+                                    {% if cve.cvss_v2_score %}
+                                        {% if cve.cvss_v3_score %}<br>{% endif %}
+                                        <span class="badge bg-secondary">V2: {{ cve.cvss_v2_score }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cve.severity %}
+                                        {% if cve.severity == 'CRITICAL' %}
+                                            <span class="badge bg-danger">{{ cve.severity }}</span>
+                                        {% elif cve.severity == 'HIGH' %}
+                                            <span class="badge bg-warning text-dark">{{ cve.severity }}</span>
+                                        {% elif cve.severity == 'MEDIUM' %}
+                                            <span class="badge bg-info text-dark">{{ cve.severity }}</span>
+                                        {% elif cve.severity == 'LOW' %}
+                                            <span class="badge bg-success">{{ cve.severity }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ cve.severity }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ cve.published_date if cve.published_date else 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye me-1"></i>View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>No results found</h4>
+                    <p>No results found for your search.</p>
+                    <hr>
+                    <p class="mb-0">Try different keywords or check for typos in your CVE ID.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="card-footer bg-white text-end">
+            <a href="{{ url_for('search') }}" class="btn btn-primary">
+                <i class="bi bi-search me-1"></i>New Search
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

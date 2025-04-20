@@ -1,0 +1,23 @@
+# Database files
+*.db
+*.db.backup
+*.sqlite
+*.sqlite3
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Local configuration
+.env
+.vscode/
+.idea/
+
+# Log files
+*.log

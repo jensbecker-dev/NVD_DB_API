@@ -1,0 +1,111 @@
+/* Custom styles for CVE details */
+.cve-header {
+    background-color: #f8f9fa;
+    border-left: 5px solid #0d6efd;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.severity-badge {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.severity-CRITICAL {
+    background-color: #dc3545;
+}
+
+.severity-HIGH {
+    background-color: #fd7e14;
+}
+
+.severity-MEDIUM {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.severity-LOW {
+    background-color: #0dcaf0;
+    color: #212529;
+}
+
+.severity-UNKNOWN {
+    background-color: #6c757d;
+}
+
+.cve-section {
+    margin-bottom: 1.5rem;
+}
+
+.reference-link {
+    word-break: break-all;
+    display: block;
+    margin-bottom: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.reference-link:hover {
+    background-color: #e9ecef;
+}
+
+.cpe-item {
+    font-family: monospace;
+    background-color: #f8f9fa;
+    padding: 0.375rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    word-break: break-all;
+}
+
+/* Logo Styling - Optimiert für Dynamik und Responsivität */
+.logo-img {
+    width: 40px;
+    height: auto;
+    transition: all 0.3s ease;
+    object-fit: contain;
+    max-width: 100%;
+}
+
+/* Hover-Effekt für das Logo */
+.logo-img:hover {
+    transform: scale(1.1);
+    filter: brightness(1.1);
+}
+
+/* Responsive Anpassungen für das Logo */
+@media (max-width: 576px) {
+    .logo-img {
+        width: 32px;
+    }
+    
+    .sidebar-header h2 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (min-width: 992px) {
+    .logo-img {
+        width: 48px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .logo-img {
+        width: 56px;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .cve-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}

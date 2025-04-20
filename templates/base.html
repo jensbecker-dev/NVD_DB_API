@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}NVD CVE Database{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='logo.png') }}">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        :root {
+            --sidebar-width: 280px;  /* Increased sidebar width */
+            --primary-dark: #212529;
+        }
+        
+        body {
+            min-height: 100vh;
+            padding-left: 0;
+            background-color: #f8f9fa;
+            transition: padding-left 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding-left: var(--sidebar-width);
+            }
+        }
+        
+        /* Logo Styling - Significantly bigger */
+        .logo-img {
+            width: 120px;  /* Much larger logo */
+            height: auto;
+            margin-bottom: 15px;
+            transition: transform 0.2s ease;
+        }
+        
+        .logo-img:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Sidebar Styling */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            background-color: var(--primary-dark);
+            z-index: 1030;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar.show {
+            transform: translateX(0);
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+        }
+        
+        .sidebar-header {
+            padding: 2rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background-color: rgba(0,0,0,0.2);
+        }
+        
+        .sidebar-header h2 {
+            color: white;
+            font-size: 1.1rem;
+            margin: 0.5rem 0 0 0;
+            font-weight: 600;
+        }
+        
+        .sidebar .list-group-item {
+            background-color: transparent;
+            color: rgba(255, 255, 255, 0.85);
+            border: none;
+            border-radius: 0;
+            padding: 0.8rem 1rem;
+            font-size: 0.95rem;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .sidebar .list-group-item:hover,
+        .sidebar .list-group-item:focus {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border-left-color: #0d6efd;
+            transform: translateX(5px);
+        }
+        
+        .sidebar .list-group-item.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: #0d6efd;
+            font-weight: 500;
+        }
+        
+        .sidebar .section-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            padding: 1rem 1rem 0.5rem;
+            margin: 0;
+        }
+        
+        .sidebar-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1050;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: #0d6efd;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+            border: none;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        
+        .sidebar-toggle:hover {
+            background-color: #0b5ed7;
+            transform: scale(1.1);
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        
+        /* Main Content Container */
+        .main-content {
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Card improvements */
+        .card {
+            transition: all 0.25s ease-in-out;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Custom scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Badge styling */
+        .badge-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .badge-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        
+        .badge-medium {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .badge-low {
+            background-color: #20c997;
+            color: white;
+        }
+        
+        .badge-unknown {
+            background-color: #6c757d;
+            color: white;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <!-- Logo Header -->
+        <div class="sidebar-header">
+            <a href="{{ url_for('index') }}" class="text-decoration-none">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="NVD CVE Database" class="logo-img">
+                <h2>NVD CVE Database</h2>
+            </a>
+        </div>
+        
+        <!-- All Menu Items Consolidated -->
+        <h5 class="section-title"><i class="bi bi-house-door me-2"></i>Home</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'index' %}active{% endif %}">
+                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+            </a>
+            <a href="{{ url_for('view_all_entries') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'view_all_entries' %}active{% endif %}">
+                <i class="bi bi-list-ul me-2"></i>All CVEs
+            </a>
+        </div>
+        
+        <h5 class="section-title"><i class="bi bi-bug me-2"></i>Vulnerability</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('vulnerability_category', category='sql-injection') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'sql-injection' %}active{% endif %}">
+                <i class="bi bi-database me-2"></i>SQL Injection
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='remote-code-execution') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'remote-code-execution' %}active{% endif %}">
+                <i class="bi bi-code-slash me-2"></i>Remote Code Execution
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='cross-site-scripting') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'cross-site-scripting' %}active{% endif %}">
+                <i class="bi bi-braces me-2"></i>Cross-Site Scripting
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='authentication-bypass') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'authentication-bypass' %}active{% endif %}">
+                <i class="bi bi-shield-x me-2"></i>Authentication Bypass
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='denial-of-service') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'denial-of-service' %}active{% endif %}">
+                <i class="bi bi-exclamation-triangle me-2"></i>Denial of Service
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='information-disclosure') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'information-disclosure' %}active{% endif %}">
+                <i class="bi bi-info-circle me-2"></i>Information Disclosure
+            </a>
+            <a href="{{ url_for('vulnerability_category', category='buffer-overflow') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vulnerability_category' and category == 'buffer-overflow' %}active{% endif %}">
+                <i class="bi bi-hdd-stack me-2"></i>Buffer Overflow
+            </a>
+        </div>
+        
+        <h5 class="section-title"><i class="bi bi-graph-up me-2"></i>Analysis</h5>
+        <div class="list-group list-group-flush">
+            <a href="{{ url_for('monthly_summary') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'monthly_summary' %}active{% endif %}">
+                <i class="bi bi-calendar3-week me-2"></i>Monthly Summary
+            </a>
+            <a href="{{ url_for('severity_distribution') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'severity_distribution' %}active{% endif %}">
+                <i class="bi bi-pie-chart me-2"></i>Severity Distribution
+            </a>
+            <a href="{{ url_for('vendor_analysis') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'vendor_analysis' %}active{% endif %}">
+                <i class="bi bi-building me-2"></i>Vendor Analysis
+            </a>
+            <a href="{{ url_for('top_vendors') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'top_vendors' %}active{% endif %}">
+                <i class="bi bi-award me-2"></i>Top Vendors
+            </a>
+        </div>
+        
+        <h5 class="section-title"><i class="bi bi-gear me-2"></i>Administration</h5>
+        <div class="list-group list-group-flush mb-4">
+            <a href="{{ url_for('update_database') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'update_database' %}active{% endif %}">
+                <i class="bi bi-arrow-repeat me-2"></i>Update Database
+            </a>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Toggle Button -->
+    <button class="sidebar-toggle d-md-none" id="sidebarToggle">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <!-- Main Content -->
+    <main class="main-content flex-grow-1">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="bg-light py-3 mt-auto">
+        <div class="container text-center">
+            <p class="text-muted mb-0">
+                NVD CVE Database &copy; {{ now().year }}
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile sidebar toggle
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+                
+                // Close sidebar when clicking outside on mobile
+                document.addEventListener('click', function(event) {
+                    const isMobile = window.innerWidth < 768;
+                    if (isMobile && sidebar.classList.contains('show')) {
+                        // Check if the click was outside the sidebar and not on the toggle button
+                        if (!sidebar.contains(event.target) && event.target !== sidebarToggle) {
+                            sidebar.classList.remove('show');
+                        }
+                    }
+                });
+                
+                // Handle touch swipe to open/close sidebar on mobile
+                let touchStartX = 0;
+                let touchEndX = 0;
+                
+                document.addEventListener('touchstart', function(event) {
+                    touchStartX = event.changedTouches[0].screenX;
+                }, false);
+                
+                document.addEventListener('touchend', function(event) {
+                    touchEndX = event.changedTouches[0].screenX;
+                    handleSwipe();
+                }, false);
+                
+                function handleSwipe() {
+                    const isMobile = window.innerWidth < 768;
+                    if (!isMobile) return;
+                    
+                    const swipeDistance = touchEndX - touchStartX;
+                    const threshold = 100; // Minimum distance to consider it a swipe
+                    
+                    // Swipe right to open
+                    if (swipeDistance > threshold && !sidebar.classList.contains('show')) {
+                        sidebar.classList.add('show');
+                    }
+                    // Swipe left to close
+                    else if (swipeDistance < -threshold && sidebar.classList.contains('show')) {
+                        sidebar.classList.remove('show');
+                    }
+                }
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

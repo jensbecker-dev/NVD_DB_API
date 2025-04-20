@@ -1,0 +1,399 @@
+{% extends "layout.html" %}
+
+{% block title %}Vendor Analysis{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+    }
+    
+    .vendor-stat-card {
+        transition: transform 0.2s;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+    
+    .vendor-stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .vendor-count {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    
+    .vendor-badge {
+        display: inline-block;
+        min-width: 24px;
+        padding: 3px 6px;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: normal;
+        border-radius: 4px;
+        margin-left: 6px;
+    }
+    
+    .top-vendor-item {
+        border-left: 4px solid #0d6efd;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        transition: transform 0.2s;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+    }
+    
+    .top-vendor-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .critical-vendors-list {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    
+    .critical-vendors-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+    }
+    
+    .severity-indicator {
+        width: 15px;
+        height: 15px;
+        display: inline-block;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+    
+    .severity-card {
+        text-align: center;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* Severity backgrounds with proper contrast */
+    .critical-bg { background-color: #dc3545; color: white; }
+    .high-bg { background-color: #fd7e14; color: #212529; }
+    .medium-bg { background-color: #ffc107; color: #212529; }
+    .low-bg { background-color: #20c997; color: #212529; }
+    .unknown-bg { background-color: #6c757d; color: white; }
+    
+    /* Dashboard metrics */
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .icon-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+    }
+    
+    .icon-circle i {
+        font-size: 1.5rem;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h2 mb-0 text-gray-800">
+            <i class="bi bi-building text-primary me-2"></i>Vendor Analysis
+        </h1>
+        <span class="badge bg-primary p-2 fs-6">Last updated: {{ now().strftime('%Y-%m-%d') }}</span>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card vendor-stat-card h-100 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-buildings me-2"></i>Total Vendors</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="vendor-count my-3">{{ vendor_count }}</div>
+                    <p class="text-muted">Unique software vendors with CVEs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card vendor-stat-card h-100 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Vendors with Critical CVEs</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="vendor-count my-3" style="color: #dc3545;">{{ vendors_with_critical }}</div>
+                    <p class="text-muted">{{ (vendors_with_critical / vendor_count * 100)|round(1) if vendor_count else 0 }}% of all vendors</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card vendor-stat-card h-100 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0"><i class="bi bi-exclamation-circle me-2"></i>Vendors with High CVEs</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="vendor-count my-3" style="color: #fd7e14;">{{ vendors_with_high }}</div>
+                    <p class="text-muted">{{ (vendors_with_high / vendor_count * 100)|round(1) if vendor_count else 0 }}% of all vendors</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Severity Distribution -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">
+            <h2 class="h5 mb-0"><i class="bi bi-pie-chart me-2"></i>Severity Distribution</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="chart-container">
+                        <canvas id="severityDistributionChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="row">
+                        <div class="col-6 col-lg-12">
+                            <div class="severity-card critical-bg mb-3">
+                                <h3 class="h5 mb-2"><i class="bi bi-exclamation-octagon me-2"></i>Critical</h3>
+                                <h3>{{ total_critical }}</h3>
+                                <p class="mb-0">Critical Vulnerabilities</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-12">
+                            <div class="severity-card high-bg mb-3">
+                                <h3 class="h5 mb-2"><i class="bi bi-exclamation-triangle me-2"></i>High</h3>
+                                <h3>{{ total_high }}</h3>
+                                <p class="mb-0">High Vulnerabilities</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-12">
+                            <div class="severity-card medium-bg mb-3">
+                                <h3 class="h5 mb-2"><i class="bi bi-exclamation-circle me-2"></i>Medium</h3>
+                                <h3>{{ total_medium }}</h3>
+                                <p class="mb-0">Medium Vulnerabilities</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-12">
+                            <div class="severity-card low-bg mb-3">
+                                <h3 class="h5 mb-2"><i class="bi bi-info-circle me-2"></i>Low</h3>
+                                <h3>{{ total_low }}</h3>
+                                <p class="mb-0">Low Vulnerabilities</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Vendors -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0"><i class="bi bi-bar-chart me-2"></i>Top 10 Vendors by CVE Count</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topVendorsChart"></canvas>
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-end">
+                        <a href="{{ url_for('top_vendors') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>View All Vendors
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-danger text-white">
+                    <h2 class="h5 mb-0"><i class="bi bi-exclamation-diamond me-2"></i>Most Critical Vendors</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="critical-vendors-list">
+                        {% for vendor in critical_vendors %}
+                        <li>
+                            <span class="severity-indicator" style="background-color: #dc3545;"></span>
+                            <strong>{{ vendor.name }}</strong>
+                            <span class="ms-auto badge bg-danger">{{ vendor.critical }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>Vendors with the most critical vulnerabilities
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Vendors List -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0"><i class="bi bi-list-ul me-2"></i>Top Vendors Details</h2>
+                <a href="{{ url_for('top_vendors') }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-arrow-right me-1"></i>View All
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for vendor in top_vendors %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="top-vendor-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ vendor.name }}</h5>
+                            <span class="badge bg-primary text-white">{{ vendor.cve_count }} CVEs</span>
+                        </div>
+                        <div class="mt-2">
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: {{ (vendor.critical / vendor.cve_count * 100)|round(1) if vendor.cve_count > 0 else 0 }}%"></div>
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (vendor.high / vendor.cve_count * 100)|round(1) if vendor.cve_count > 0 else 0 }}%"></div>
+                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ (vendor.medium / vendor.cve_count * 100)|round(1) if vendor.cve_count > 0 else 0 }}%"></div>
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ (vendor.low / vendor.cve_count * 100)|round(1) if vendor.cve_count > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex mt-2">
+                            <small class="text-danger me-2">{{ vendor.critical }} Critical</small>
+                            <small class="text-warning me-2">{{ vendor.high }} High</small>
+                        </div>
+                        <div class="mt-2">
+                            <a href="{{ url_for('vendor_detail', vendor=vendor.slug) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Severity Distribution Chart
+    const sevCtx = document.getElementById('severityDistributionChart').getContext('2d');
+    const severityChart = new Chart(sevCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Critical', 'High', 'Medium', 'Low', 'Unknown'],
+            datasets: [{
+                data: [
+                    {{ total_critical }},
+                    {{ total_high }},
+                    {{ total_medium }},
+                    {{ total_low }},
+                    {{ total_unknown }}
+                ],
+                backgroundColor: [
+                    '#dc3545', // Critical
+                    '#fd7e14', // High
+                    '#ffc107', // Medium
+                    '#20c997', // Low
+                    '#6c757d'  // Unknown
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((acc, val) => acc + val, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Top Vendors Chart
+    const vendorCtx = document.getElementById('topVendorsChart').getContext('2d');
+    const vendorsChart = new Chart(vendorCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ vendor_names|tojson }},
+            datasets: [{
+                label: 'CVE Count',
+                data: {{ vendor_cve_counts|tojson }},
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of CVEs'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw} CVEs`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

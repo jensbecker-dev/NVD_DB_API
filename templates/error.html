@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container error-container">
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Error</h4>
+        <p>{{ error }}</p>
+    </div>
+    <div class="action-buttons mt-3">
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Return to Home</a>
+        {# Removed the link to 'search', as it's now part of 'index' #}
+        {# <a href="{{ url_for('search') }}" class="button">Search CVEs</a> #}
+    </div>
+</div>
+{% endblock %}

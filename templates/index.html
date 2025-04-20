@@ -1,0 +1,440 @@
+{% extends "layout.html" %}
+
+{% block title %}NVD CVE Database Explorer - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h2 mb-0 text-gray-800">
+            <i class="bi bi-speedometer2 me-2 text-primary"></i>Security Dashboard
+        </h1>
+        <span class="d-none d-md-inline-block badge bg-dark p-2">
+            <i class="bi bi-calendar3 me-1"></i>Last updated: {{ now().strftime('%Y-%m-%d') }}
+        </span>
+    </div>
+    
+    <!-- CVE Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h6 class="text-uppercase mb-1">Total CVEs</h6>
+                    <p class="stat-number">{{ total_cve_count }}</p>
+                    <div class="small">
+                        <i class="bi bi-database me-1"></i>In database
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card bg-danger text-white h-100">
+                <div class="card-body">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <h6 class="text-uppercase mb-1">Critical</h6>
+                    <p class="stat-number">{{ severity_counts.get('CRITICAL', 0) }}</p>
+                    <div class="small">
+                        <i class="bi bi-arrow-up me-1"></i>{{ (severity_counts.get('CRITICAL', 0) / total_cve_count * 100)|round(1) }}% of all CVEs
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-exclamation-circle"></i>
+                    </div>
+                    <h6 class="text-uppercase mb-1 text-dark">High</h6>
+                    <p class="stat-number text-dark">{{ severity_counts.get('HIGH', 0) }}</p>
+                    <div class="small text-dark">
+                        <i class="bi bi-graph-up me-1"></i>{{ (severity_counts.get('HIGH', 0) / total_cve_count * 100)|round(1) }}% of all CVEs
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card bg-info text-dark h-100">
+                <div class="card-body">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <h6 class="text-uppercase mb-1 text-dark">Medium & Low</h6>
+                    <p class="stat-number text-dark">{{ severity_counts.get('MEDIUM', 0) + severity_counts.get('LOW', 0) }}</p>
+                    <div class="small text-dark">
+                        <i class="bi bi-shield-check me-1"></i>{{ ((severity_counts.get('MEDIUM', 0) + severity_counts.get('LOW', 0)) / total_cve_count * 100)|round(1) }}% of all CVEs
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Access Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card dashboard-card h-100 border-left-primary">
+                <div class="card-body">
+                    <div class="dashboard-icon text-primary">
+                        <i class="bi bi-calendar3-week"></i>
+                    </div>
+                    <div class="dashboard-title">Monthly Summary</div>
+                    <div class="dashboard-text">View CVE publication trends and monthly statistics</div>
+                    <a href="{{ url_for('monthly_summary') }}" class="dashboard-link text-primary">
+                        View Report <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card dashboard-card h-100 border-left-danger">
+                <div class="card-body">
+                    <div class="dashboard-icon text-danger">
+                        <i class="bi bi-pie-chart"></i>
+                    </div>
+                    <div class="dashboard-title">Severity Distribution</div>
+                    <div class="dashboard-text">Analyze the distribution of vulnerabilities by severity</div>
+                    <a href="{{ url_for('severity_distribution') }}" class="dashboard-link text-danger">
+                        View Report <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card dashboard-card h-100 border-left-warning">
+                <div class="card-body">
+                    <div class="dashboard-icon text-warning">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <div class="dashboard-title">Vendor Analysis</div>
+                    <div class="dashboard-text">Explore the most vulnerable software vendors</div>
+                    <a href="{{ url_for('vendor_analysis') }}" class="dashboard-link text-warning">
+                        View Report <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Search Section -->
+    <div class="card search-section mb-5">
+        <div class="card-header bg-white border-0">
+            <h3 class="mb-0"><i class="bi bi-search me-2 text-primary"></i>Advanced Search</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('index') }}" class="row g-3">
+                <div class="col-md-6">
+                    <label for="search_term" class="form-label">Search Term</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-keyboard"></i></span>
+                        <input type="text" class="form-control" id="search_term" name="search_term" 
+                            placeholder="CVE ID, keyword, or vendor name" value="{{ search_term }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="severity" class="form-label">Severity</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-exclamation-diamond"></i></span>
+                        <select class="form-select" id="severity" name="severity">
+                            <option value="" {% if not severity %}selected{% endif %}>Any severity</option>
+                            <option value="CRITICAL" {% if severity == "CRITICAL" %}selected{% endif %}>Critical</option>
+                            <option value="HIGH" {% if severity == "HIGH" %}selected{% endif %}>High</option>
+                            <option value="MEDIUM" {% if severity == "MEDIUM" %}selected{% endif %}>Medium</option>
+                            <option value="LOW" {% if severity == "LOW" %}selected{% endif %}>Low</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label d-block">Options</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="exploitable" name="exploitable"
+                            {% if request.args.get('exploitable') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="exploitable">
+                            <i class="bi bi-bug me-1 text-danger"></i>Show potentially exploitable only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary ms-2">
+                        <i class="bi bi-x-circle me-1"></i>Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    {% if search_performed %}
+    <div class="card shadow-sm mb-5">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Search Results</h4>
+            {% if results %}
+            <span class="badge bg-primary p-2">Found {{ results|length }} result{% if results|length != 1 %}s{% endif %}</span>
+            {% endif %}
+        </div>
+        
+        <div class="card-body">
+            {% if results %}
+            <div class="table-responsive">
+                <table class="table table-hover cve-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>CVE ID</th>
+                            <th>Severity</th>
+                            <th>Description</th>
+                            <th>Published</th>
+                            <th>CVSS Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cve in results %}
+                        <tr>
+                            <td><a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}" class="text-primary">{{ cve.cve_id }}</a></td>
+                            <td>
+                                {% if cve.severity == 'CRITICAL' %}
+                                <span class="badge rounded-pill badge-critical"><i class="bi bi-exclamation-octagon-fill me-1"></i>Critical</span>
+                                {% elif cve.severity == 'HIGH' %}
+                                <span class="badge rounded-pill badge-high"><i class="bi bi-exclamation-triangle-fill me-1"></i>High</span>
+                                {% elif cve.severity == 'MEDIUM' %}
+                                <span class="badge rounded-pill badge-medium"><i class="bi bi-exclamation-circle-fill me-1"></i>Medium</span>
+                                {% elif cve.severity == 'LOW' %}
+                                <span class="badge rounded-pill badge-low"><i class="bi bi-info-circle-fill me-1"></i>Low</span>
+                                {% else %}
+                                <span class="badge rounded-pill badge-unknown"><i class="bi bi-question-circle-fill me-1"></i>Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ cve.description[:150] }}{% if cve.description|length > 150 %}...{% endif %}</td>
+                            <td>{{ cve.published_date.strftime('%Y-%m-%d') if cve.published_date }}</td>
+                            <td>
+                                {% if cve.cvss_v3_score %}
+                                <span class="badge rounded-pill bg-dark">V3: {{ cve.cvss_v3_score }}</span>
+                                {% elif cve.cvss_v2_score %}
+                                <span class="badge rounded-pill bg-secondary">V2: {{ cve.cvss_v2_score }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+                <div>No results found for "<strong>{{ search_term }}</strong>"</div>
+            </div>
+            {% endif %}
+            
+            {% if total_pages and total_pages > 1 %}
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted">
+                    Showing {{ (current_page - 1) * 100 + 1 }} to {{ [current_page * 100, total_results]|min }} of {{ total_results }} entries
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        <!-- Previous page -->
+                        {% if current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for(request.endpoint, page=current_page-1, search_term=search_term, severity=severity, exploitable=exploitable, sort_by=sort_by if sort_by else None, search_performed=True) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <!-- Page numbers -->
+                        {% set start_page = [current_page - 2, 1]|max %}
+                        {% set end_page = [start_page + 4, total_pages]|min %}
+                        {% set start_page = [end_page - 4, 1]|max %}
+                        
+                        {% for page_num in range(start_page, end_page + 1) %}
+                        <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for(request.endpoint, page=page_num, search_term=search_term, severity=severity, exploitable=exploitable, sort_by=sort_by if sort_by else None, search_performed=True) }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                        
+                        <!-- Next page -->
+                        {% if current_page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for(request.endpoint, page=current_page+1, search_term=search_term, severity=severity, exploitable=exploitable, sort_by=sort_by if sort_by else None, search_performed=True) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Database Actions -->
+    <div class="row mb-5">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex">
+                    <div class="icon-circle bg-primary me-3">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title">Update Database</h5>
+                        <p class="card-text text-muted">Fetch the latest CVE entries from the National Vulnerability Database.</p>
+                        <a href="{{ url_for('update_database') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Update Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body d-flex">
+                    <div class="icon-circle bg-success me-3">
+                        <i class="bi bi-list-ul"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title">View All CVEs</h5>
+                        <p class="card-text text-muted">Browse through all CVE entries currently stored in the database.</p>
+                        <a href="{{ url_for('view_all_entries') }}" class="btn btn-success">
+                            <i class="bi bi-eye me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Badge styling */
+    .badge-critical { background-color: #dc3545; }
+    .badge-high { background-color: #fd7e14; }
+    .badge-medium { background-color: #ffc107; color: #000; }
+    .badge-low { background-color: #0dcaf0; }
+    .badge-unknown { background-color: #6c757d; }
+    
+    /* Stat card with icon */
+    .stat-card {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .icon-wrapper {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    .icon-wrapper i {
+        font-size: 1.5rem;
+        color: white;
+    }
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0;
+        line-height: 1.2;
+    }
+    
+    /* Custom dashboard cards */
+    .dashboard-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .dashboard-icon {
+        font-size: 2rem;
+        margin-bottom: 15px;
+    }
+    .dashboard-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    .dashboard-text {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .dashboard-link {
+        display: inline-block;
+        margin-top: 15px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    
+    /* Search box styling */
+    .search-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .search-section .form-control:focus,
+    .search-section .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        border-color: #86b7fe;
+    }
+    
+    /* Icon circle for cards */
+    .icon-circle {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+    
+    .bg-primary { background-color: #0d6efd !important; }
+    .bg-success { background-color: #198754 !important; }
+    
+    @media (max-width: 992px) {
+        .stat-number {
+            font-size: 2rem;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .stat-number {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+{% endblock %}
