@@ -3,12 +3,11 @@ import logging
 import sqlalchemy as sa
 # Update declarative_base import for SQLAlchemy 2.0 compatibility
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, case
 from flask import Flask, render_template, request, jsonify, redirect, url_for, json
-from modules.nvdapi import NVDApi, fetch_nvd_data_feed, fetch_all_nvd_data, determine_severity
+from modules.nvdapi import NVDApi, fetch_all_nvd_data, determine_severity
 from datetime import datetime
 import threading
-from utils.helpers import get_vendor_data, generate_slug
 import calendar
 
 # Note: The 'RequestsDependencyWarning' suggests installing 'chardet' or 'charset_normalizer'
@@ -613,9 +612,17 @@ def monthly_summary():
 
 @app.route('/severity_distribution')
 def severity_distribution():
-    """Displays the distribution of CVEs by severity level."""
+    """Displays the distribution of CVEs by severity level, trends, and CVSS scores."""
     severity_counts = {}
-    severity_percents = {} # Initialize the dictionary
+    severity_percents = {}
+    years_for_template = []
+    critical_series = []
+    high_series = []
+    medium_series = []
+    low_series = []
+    unknown_series = []
+    cvss_ranges = [0] * 10  # Initialize list for 10 ranges (0-1, 1-2, ..., 9-10)
+
     try:
         engine = create_local_cve_db()
         session = get_session(engine)
@@ -623,73 +630,100 @@ def severity_distribution():
         if CVE_Model is None:
             return render_template('error.html', error_message="Database model not initialized.")
 
-        # Query to get counts grouped by severity
+        # 1. Overall Severity Counts and Percentages
         severity_query = session.query(
             CVE_Model.severity, func.count(CVE_Model.id).label('count')
         ).group_by(CVE_Model.severity).all()
 
-        # Initialize counts for all expected severities
         severity_map = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
         for severity, count in severity_query:
             s_upper = (severity or 'UNKNOWN').upper()
-            if s_upper in severity_map: # Ensure we only count expected severities
-                 severity_map[s_upper] = count
+            if s_upper in severity_map:
+                severity_map[s_upper] = count
         severity_counts = severity_map
-
-        # Calculate total CVE count
         total_cve_count = sum(severity_counts.values())
 
-        # Calculate percentages
         if total_cve_count > 0:
             for severity, count in severity_counts.items():
-                severity_percents[severity] = round((count / total_cve_count) * 100, 2)
+                severity_percents[severity] = round((count / total_cve_count) * 100, 1)  # Use 1 decimal place
         else:
-            # Handle case with no CVEs
             for severity in severity_counts:
                 severity_percents[severity] = 0.0
 
+        # 2. Severity Trends Over Time
+        yearly_severity_query = session.query(
+            extract('year', CVE_Model.published_date).label('year'),
+            CVE_Model.severity,
+            func.count(CVE_Model.id).label('count')
+        ).filter(CVE_Model.published_date.isnot(None)) \
+            .group_by('year', CVE_Model.severity) \
+            .order_by('year') \
+            .all()
+
+        yearly_data = {}  # {year: {severity: count}}
+        all_years = set()
+        for year, severity, count in yearly_severity_query:
+            if year:  # Ensure year is not None
+                all_years.add(int(year))
+                if year not in yearly_data:
+                    yearly_data[year] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+                s_upper = (severity or 'UNKNOWN').upper()
+                if s_upper in yearly_data[year]:
+                    yearly_data[year][s_upper] += count
+
+        if all_years:
+            years_for_template = sorted(list(all_years))
+            # Ensure all years have entries for all severities
+            for year in years_for_template:
+                year_data = yearly_data.get(year, {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0})
+                critical_series.append(year_data.get("CRITICAL", 0))
+                high_series.append(year_data.get("HIGH", 0))
+                medium_series.append(year_data.get("MEDIUM", 0))
+                low_series.append(year_data.get("LOW", 0))
+                unknown_series.append(year_data.get("UNKNOWN", 0))
+
+        # 3. CVSS Score Distribution (Prioritize v3, fallback to v2)
+        # Define score ranges (0-1, 1-2, ..., 9-10)
+        score_case = case(
+            (CVE_Model.cvss_v3_score.isnot(None), CVE_Model.cvss_v3_score),
+            else_=CVE_Model.cvss_v2_score
+        ).label('score')
+
+        cvss_query = session.query(
+            func.floor(score_case).label('score_floor'),  # Use floor to group into integer bins 0, 1, ..., 9
+            func.count(CVE_Model.id).label('count')
+        ).filter(score_case.isnot(None)) \
+            .group_by('score_floor') \
+            .all()
+
+        for score_floor, count in cvss_query:
+            if score_floor is not None:
+                index = int(score_floor)
+                if 0 <= index < 10:  # Ensure index is within bounds (0-9)
+                    cvss_ranges[index] = count
+                elif index == 10:  # Handle score 10.0, place it in the last bin (9-10)
+                    cvss_ranges[9] = count
+
     except Exception as e:
-        logging.error(f"Error fetching severity distribution: {e}")
+        logging.error(f"Error fetching severity distribution data: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         return render_template('error.html', error_message="An error occurred while generating the severity distribution.")
     finally:
         if 'session' in locals() and session:
             session.close()
 
-    # Prepare data for Chart.js (Overall Distribution Pie/Bar Chart)
-    labels = list(severity_counts.keys())
-    data = list(severity_counts.values())
-    chart_data = json.dumps({
-        'labels': labels,
-        'data': data
-    })
-
-    # Define years as an empty list to prevent template error (from previous fix)
-    years_for_template = []
-
-    # Define default empty lists for time-series data expected by the template
-    # TODO: Implement actual time-series data fetching if needed for charts
-    critical_series = []
-    high_series = []
-    medium_series = []
-    low_series = []
-    unknown_series = []
-
-    # Define default empty dict for CVSS ranges data expected by the template
-    # TODO: Implement actual CVSS range data fetching if needed for charts
-    cvss_ranges = {}
-
     return render_template('severity_distribution.html',
+                           total_cves=total_cve_count,  # Pass total count
                            severity_counts=severity_counts,
-                           severity_percents=severity_percents, # Pass the percentages to the template
-                           chart_data=chart_data,
-                           years=years_for_template, # Pass an empty list for 'years'
-                           # Pass empty lists for time-series data
+                           severity_percents=severity_percents,
+                           years=years_for_template,  # Pass list of years
                            critical_series=critical_series,
                            high_series=high_series,
                            medium_series=medium_series,
                            low_series=low_series,
                            unknown_series=unknown_series,
-                           cvss_ranges=cvss_ranges) # Pass empty dict for cvss_ranges
+                           cvss_ranges=cvss_ranges)  # Pass list of counts per range
 
 @app.route('/update_database')
 def update_database():
@@ -861,4 +895,3 @@ if __name__ == '__main__':
             CVE_Model = create_cve_table(engine)
 
     app.run(debug=True, host='0.0.0.0', port=8080)
-
