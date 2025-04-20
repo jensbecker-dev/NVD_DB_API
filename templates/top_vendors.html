@@ -289,10 +289,10 @@ document.addEventListener('DOMContentLoaded', function() {
     new Chart(vendorsCtx, {
         type: 'bar',
         data: {
-            labels: {{ top_vendor_names|tojson }},
+            labels: {{ top_vendor_names|default([])|tojson }},
             datasets: [{
                 label: 'CVE Count',
-                data: {{ top_vendor_counts|tojson }},
+                data: {{ top_vendor_counts|default([])|tojson }},
                 backgroundColor: 'rgba(13, 110, 253, 0.7)',
                 borderColor: 'rgba(13, 110, 253, 1)',
                 borderWidth: 1

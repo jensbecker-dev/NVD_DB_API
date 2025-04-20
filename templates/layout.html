@@ -262,6 +262,9 @@
             <a href="{{ url_for('severity_distribution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('severity_distribution') %}active{% endif %}">
                 <i class="bi bi-pie-chart me-2"></i>Severity Distribution
             </a>
+            <a href="{{ url_for('severity_distribution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('severity_distribution') %}active{% endif %}">
+                Severity Distribution
+            </a>
             <a href="{{ url_for('vendor_analysis') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vendor_analysis') %}active{% endif %}">
                 <i class="bi bi-building me-2"></i>Vendor Analysis
             </a>
@@ -385,4 +388,3 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
-``` 

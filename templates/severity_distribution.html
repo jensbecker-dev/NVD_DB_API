@@ -241,6 +241,16 @@
             </div>
         </div>
     </div>
+
+    <!-- New Severity Distribution Section -->
+    <div class="container">
+        <h2>Severity Distribution</h2>
+        <ul>
+            {% for severity, percent in severity_percents.items() %}
+                <li>{{ severity }}: {{ percent }}%</li>
+            {% endfor %}
+        </ul>
+    </div>
 </div>
 {% endblock %}
 

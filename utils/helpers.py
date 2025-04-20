@@ -3,15 +3,6 @@ from sqlalchemy import func, case
 from collections import defaultdict
 import re
 
-# Assuming CVE_Model is defined in app.py or accessible
-# If not, it might need to be passed or imported differently
-try:
-    # This might be fragile depending on how app is structured
-    from app import CVE_Model
-except ImportError:
-    logging.error("Could not import CVE_Model from app in helpers.py. Vendor analysis might fail.")
-    CVE_Model = None
-
 def generate_slug(name):
     """Generate a URL-friendly slug from a name."""
     name = name.lower()
@@ -28,27 +19,35 @@ def extract_vendor_from_cpe(cpe_string):
         return parts[3]
     return None
 
-def get_vendor_data(session):
+def get_vendor_data(session, CVE_Model):
     """
     Queries the database to get CVE counts and severity distribution per vendor.
 
     Args:
         session: SQLAlchemy session object.
+        CVE_Model: The SQLAlchemy model class for CVEs.
 
     Returns:
         A list of dictionaries, each representing a vendor with its CVE counts.
         Example: [{'name': 'Microsoft', 'cve_count': 500, 'critical': 50, ... 'slug': 'microsoft'}, ...]
     """
+    # Check if CVE_Model was passed correctly
     if CVE_Model is None:
-        logging.warning("CVE_Model not available in get_vendor_data. Returning empty list.")
+        logging.error("CVE_Model was not provided to get_vendor_data. Cannot perform vendor analysis.")
         return []
 
     logging.info("Starting vendor data aggregation...")
     vendor_cve_details = defaultdict(lambda: {'cve_count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0})
 
     try:
-        # Query all CVEs that have CPE data
+        # Query all CVEs that have CPE data using the passed CVE_Model
         cves_with_cpe = session.query(CVE_Model.cpe_affected, CVE_Model.severity).filter(CVE_Model.cpe_affected != '').all()
+
+        # Handle case where no CVEs are found
+        if not cves_with_cpe:
+            logging.warning("No CVEs with CPE data found in the database.")
+            return []
+
         logging.info(f"Processing {len(cves_with_cpe)} CVEs with CPE data for vendor analysis.")
 
         for cpe_list_str, severity in cves_with_cpe:
