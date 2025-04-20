@@ -262,14 +262,8 @@
             <a href="{{ url_for('severity_distribution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('severity_distribution') %}active{% endif %}">
                 <i class="bi bi-pie-chart me-2"></i>Severity Distribution
             </a>
-            <a href="{{ url_for('severity_distribution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('severity_distribution') %}active{% endif %}">
-                Severity Distribution
-            </a>
             <a href="{{ url_for('vendor_analysis') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vendor_analysis') %}active{% endif %}">
-                <i class="bi bi-building me-2"></i>Vendor Analysis
-            </a>
-            <a href="{{ url_for('top_vendors') }}" class="list-group-item list-group-item-action {% if request.path == url_for('top_vendors') %}active{% endif %}">
-                Vendor Analysis
+                <i class="bi bi-building me-2"></i> Vendor Analysis
             </a>
         </div>
         
@@ -351,40 +345,39 @@
             }
             
             // Ensure consistent active link highlighting across all pages
-            // This additional script ensures the active link is highlighted even for dynamic routes
             const currentPath = window.location.pathname;
             const sidebarLinks = document.querySelectorAll('.sidebar .list-group-item');
-            
+
             sidebarLinks.forEach(link => {
-                // For exact matches
-                if (link.getAttribute('href') === currentPath) {
+                const linkHref = link.getAttribute('href');
+
+                // Remove existing active class first
+                link.classList.remove('active');
+
+                // Check for exact match
+                if (linkHref === currentPath) {
                     link.classList.add('active');
                 }
-                // For partial matches (like dynamic routes)
-                else if (currentPath.includes('vulnerability_category') && 
-                         link.getAttribute('href').includes('vulnerability_category')) {
-                    
-                    // Extract category from URL
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const currentCategory = currentPath.split('/').pop();
-                    
-                    // Compare with link href
-                    if (link.getAttribute('href').includes(currentCategory)) {
+                // Special handling for vulnerability category pages
+                else if (currentPath.startsWith('/vulnerability_category/') && linkHref.startsWith('/vulnerability_category/')) {
+                    const currentCategorySlug = currentPath.split('/').pop();
+                    if (linkHref.endsWith(currentCategorySlug)) {
                         link.classList.add('active');
                     }
                 }
-                // For vendor_detail pages
-                else if (currentPath.includes('vendor_detail') && 
-                         link.getAttribute('href').includes('vendor_analysis')) {
-                    link.classList.add('active');
+                // Ensure Vendor Analysis is only active on its own page, not detail pages
+                else if (currentPath === '/vendor_analysis' && linkHref === '/vendor_analysis') {
+                     link.classList.add('active');
                 }
-                // For CVE details pages
-                else if (currentPath.includes('cve_details') && 
-                         (link.getAttribute('href') === '/' || link.getAttribute('href').includes('view_all_entries'))) {
-                    // Don't add active for these, as they're not direct parents
-                }
+                // Add other specific route checks if needed, but avoid overly broad matches
             });
-        });    </script>
+
+            // If no specific link matched (e.g., on a detail page like cve_details or vendor_detail),
+            // you might want to highlight a parent category or leave nothing active.
+            // Current logic leaves detail pages without an active link in the main sections, which is often desired.
+
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

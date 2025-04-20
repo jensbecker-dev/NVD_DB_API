@@ -4,11 +4,12 @@ import sqlalchemy as sa
 # Update declarative_base import for SQLAlchemy 2.0 compatibility
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import func, extract
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, json
 from modules.nvdapi import NVDApi, fetch_nvd_data_feed, fetch_all_nvd_data, determine_severity
 from datetime import datetime
 import threading
 from utils.helpers import get_vendor_data, generate_slug
+import calendar
 
 # Note: The 'RequestsDependencyWarning' suggests installing 'chardet' or 'charset_normalizer'
 # for optimal character encoding detection by the requests library (likely used in nvdapi.py).
@@ -433,6 +434,203 @@ def cve_details(cve_id):
         logging.error(f"Error fetching CVE details for {cve_id}: {e}")
         return render_template('error.html', error=f"An error occurred while fetching details for {cve_id}.")
 
+@app.route('/vulnerability_category/<string:category_slug>')
+def vulnerability_category(category_slug):
+    """Display CVEs belonging to a specific vulnerability category."""
+    page = request.args.get('page', 1, type=int)
+    per_page = 50  # Adjust as needed
+    results = []
+    total_results = 0
+    total_pages = 1
+    category_name = category_slug.replace('-', ' ').title()  # Simple name generation
+    severity_counts = {} # Initialize severity_counts
+    total_cve_count = 0 # Initialize total_cve_count
+
+    # --- TODO: Define mapping from category_slug to search criteria ---
+    # This is a crucial part you need to implement based on your data.
+    # Example mapping (adjust CWE IDs and keywords):
+    category_criteria = {
+        'sql-injection': {'cwe_ids': ['CWE-89']},
+        'remote-code-execution': {'keywords': ['remote code execution', 'RCE']},
+        'cross-site-scripting': {'cwe_ids': ['CWE-79']},
+        'authentication-bypass': {'keywords': ['authentication bypass', 'auth bypass']},
+        'denial-of-service': {'cwe_ids': ['CWE-400', 'CWE-770'], 'keywords': ['denial of service', 'DoS']},
+        'information-disclosure': {'cwe_ids': ['CWE-200']},
+        'buffer-overflow': {'cwe_ids': ['CWE-119', 'CWE-120', 'CWE-121', 'CWE-122']}
+        # Add more categories as needed
+    }
+
+    criteria = category_criteria.get(category_slug)
+
+    if not criteria:
+        return render_template('error.html', error_message=f"Unknown vulnerability category: {category_name}"), 404
+
+    try:
+        engine = create_local_cve_db()
+        session = get_session(engine)
+
+        if CVE_Model is None:
+            return render_template('error.html', error_message="Database model not initialized.")
+
+        # --- Calculate overall severity counts (same as in index route) ---
+        severity_query = session.query(
+            CVE_Model.severity, func.count(CVE_Model.id)
+        ).group_by(CVE_Model.severity).all()
+
+        severity_map = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+        for severity, count in severity_query:
+            s_upper = (severity or 'UNKNOWN').upper()
+            if s_upper in severity_map:
+                 severity_map[s_upper] = count
+        severity_counts = severity_map
+        total_cve_count = sum(severity_counts.values())
+        # --- End of severity counts calculation ---
+
+        query = session.query(CVE_Model)
+
+        # Apply filters based on criteria
+        filters = []
+        if 'cwe_ids' in criteria:
+            cwe_filters = [CVE_Model.cwe_id.ilike(f"%{cwe}%") for cwe in criteria['cwe_ids']]
+            if cwe_filters:
+                filters.append(sa.or_(*cwe_filters))
+
+        if 'keywords' in criteria:
+            keyword_filters = [CVE_Model.description.ilike(f"%{kw}%") for kw in criteria['keywords']]
+            if keyword_filters:
+                filters.append(sa.or_(*keyword_filters))
+
+        if filters:
+            query = query.filter(sa.or_(*filters))  # Combine CWE and keyword searches with OR
+        else:
+            # If no specific criteria defined for slug, maybe return empty or error
+            return render_template('error.html', error_message=f"No search criteria defined for category: {category_name}")
+
+        total_results = query.count()
+        query = query.order_by(CVE_Model.published_date.desc())
+        paginated_results = query.limit(per_page).offset((page - 1) * per_page).all()
+        results = paginated_results
+        total_pages = (total_results + per_page - 1) // per_page
+
+    except Exception as e:
+        logging.error(f"Error fetching CVEs for category {category_slug}: {e}")
+        return render_template('error.html', error_message=f"An error occurred while fetching data for {category_name}.")
+    finally:
+        if 'session' in locals() and session:
+            session.close()
+
+    # Reuse index.html or create a specific template like vulnerability_category.html
+    return render_template('index.html',
+                           results=results,
+                           search_term=f"Category: {category_name}",  # Use category name as search term display
+                           search_performed=True,  # Indicate that a filter is active
+                           is_category_view=True,  # Flag for template logic if needed
+                           category_slug=category_slug,  # Pass slug for potential use in template
+                           current_page=page,
+                           total_pages=total_pages,
+                           total_results=total_results,
+                           severity_counts=severity_counts, # Pass severity_counts
+                           total_cve_count=total_cve_count) # Pass total_cve_count
+
+@app.route('/monthly_summary')
+def monthly_summary():
+    """Displays a summary of CVEs published per month."""
+    summary_data = {}
+    try:
+        engine = create_local_cve_db()
+        session = get_session(engine)
+
+        if CVE_Model is None:
+            return render_template('error.html', error_message="Database model not initialized.")
+
+        # Query to get counts grouped by year and month
+        monthly_counts = session.query(
+            extract('year', CVE_Model.published_date).label('year'),
+            extract('month', CVE_Model.published_date).label('month'),
+            func.count(CVE_Model.id).label('count')
+        ).filter(CVE_Model.published_date.isnot(None)) \
+         .group_by('year', 'month') \
+         .order_by(sa.desc('year'), sa.desc('month')) \
+         .all()
+
+        # Process data into a nested dictionary {year: {month: count}}
+        for year, month, count in monthly_counts:
+            if year not in summary_data:
+                summary_data[year] = {}
+            summary_data[year][month] = count
+
+        # Example: Assume you get these values somehow
+        current_year = datetime.now().year
+        all_years_in_data = sorted(summary_data.keys(), reverse=True)  # Get years from your data
+        selected_year = request.args.get('year', default=current_year, type=int)
+        if not all_years_in_data:
+            all_years_in_data = [current_year]  # Default if no data
+            selected_year = current_year
+        elif selected_year not in all_years_in_data:
+            selected_year = all_years_in_data[0]  # Default to latest year if invalid year selected
+
+        month_names_list = list(calendar.month_name)[1:]  # Get month names ["January", ..., "December"]
+
+    except Exception as e:
+        logging.error(f"Error fetching monthly summary: {e}")
+        return render_template('error.html', error_message="An error occurred while generating the monthly summary.")
+    finally:
+        if 'session' in locals() and session:
+            session.close()
+
+    return render_template(
+        'monthly_summary.html',
+        summary_data=summary_data,
+        years=all_years_in_data,         # Pass the list of years
+        selected_year=selected_year,     # Pass the selected year
+        month_names=month_names_list     # Pass the list of month names
+    )
+
+@app.route('/severity_distribution')
+def severity_distribution():
+    """Displays the distribution of CVEs by severity level."""
+    severity_counts = {}
+    try:
+        engine = create_local_cve_db()
+        session = get_session(engine)
+
+        if CVE_Model is None:
+            return render_template('error.html', error_message="Database model not initialized.")
+
+        # Query to get counts grouped by severity
+        severity_query = session.query(
+            CVE_Model.severity, func.count(CVE_Model.id).label('count')
+        ).group_by(CVE_Model.severity).all()
+
+        # Initialize counts for all expected severities
+        severity_map = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+        for severity, count in severity_query:
+            s_upper = (severity or 'UNKNOWN').upper()
+            if s_upper in severity_map: # Ensure we only count expected severities
+                 severity_map[s_upper] = count
+        severity_counts = severity_map
+
+    except Exception as e:
+        logging.error(f"Error fetching severity distribution: {e}")
+        return render_template('error.html', error_message="An error occurred while generating the severity distribution.")
+    finally:
+        if 'session' in locals() and session:
+            session.close()
+
+    # Prepare data for Chart.js
+    labels = list(severity_counts.keys())
+    data = list(severity_counts.values())
+
+    # Pass data as JSON for easy use in JavaScript
+    chart_data = json.dumps({
+        'labels': labels,
+        'data': data
+    })
+
+    return render_template('severity_distribution.html',
+                           severity_counts=severity_counts,
+                           chart_data=chart_data)
+
 @app.route('/update_database')
 def update_database():
     """Update the local CVE database with latest data"""
@@ -510,333 +708,50 @@ def db_status():
 
 @app.route('/vendor_analysis')
 def vendor_analysis():
-    """Display vendor analysis based on CVE data."""
-    session = None # Initialize session to None
+    """
+    Route to display an analysis of CVEs by vendor.
+    Fetches vendor data (e.g., CVE counts per vendor) and renders the vendor analysis template.
+    """
     try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-
-        engine = create_local_cve_db()
-        session = get_session(engine) # Assign session here
-
-        # Fetch vendor data using helper function
-        # IMPORTANT: The get_vendor_data function in utils/helpers.py MUST be updated
-        # to accept two arguments: session and CVE_Model. This is the cause of the
-        # "takes 1 positional argument but 2 were given" TypeError.
-        vendor_list = get_vendor_data(session, CVE_Model)
-
-        # Handle case where no vendor data is available
-        if not vendor_list:
-            # Note: Returning an error page here is the correct handling within this function
-            # if get_vendor_data returns no data. The root cause for empty vendor_list
-            # might be an empty database, missing CPE data, or an issue within the
-            # get_vendor_data function itself (in utils/helpers.py).
-            return render_template('error.html', error="No vendor data available. Please update the database or check helper function.")
-
-        # Sanitize vendor data to ensure all keys exist
-        sanitized_vendor_list = []
-        for vendor in vendor_list:
-            name = vendor.get('name', 'Unknown')
-            slug = vendor.get('slug', generate_slug(name))
-            sanitized_vendor = {
-                'name': name,
-                'slug': slug,
-                'cve_count': vendor.get('cve_count', 0),
-                'critical': vendor.get('critical', 0),
-                'high': vendor.get('high', 0),
-                'medium': vendor.get('medium', 0),
-                'low': vendor.get('low', 0),
-                'unknown': vendor.get('unknown', 0)
-            }
-            sanitized_vendor_list.append(sanitized_vendor)
-
-        # Calculate total counts for each severity
-        total_critical = sum(v['critical'] for v in sanitized_vendor_list)
-        total_high = sum(v['high'] for v in sanitized_vendor_list)
-        total_medium = sum(v['medium'] for v in sanitized_vendor_list)
-        total_low = sum(v['low'] for v in sanitized_vendor_list)
-        total_unknown = sum(v['unknown'] for v in sanitized_vendor_list)
-        total_cve_count = sum(v['cve_count'] for v in sanitized_vendor_list)
-
-        # Prevent division by zero
-        percent_critical = round((total_critical / total_cve_count) * 100, 2) if total_cve_count > 0 else 0
-        percent_high = round((total_high / total_cve_count) * 100, 2) if total_cve_count > 0 else 0
-
-        # Ensure all variables passed to the template are defined
-        return render_template(
-            'vendor_analysis.html',
-            vendors=sanitized_vendor_list,
-            total_critical=total_critical,
-            total_high=total_high,
-            total_medium=total_medium,
-            total_low=total_low,
-            total_unknown=total_unknown,
-            percent_critical=percent_critical,
-            percent_high=percent_high,
-            total_vendor_count=len(sanitized_vendor_list),  # Ensure this is passed
-            vendors_with_critical_count=sum(1 for v in sanitized_vendor_list if v['critical'] > 0),
-            vendors_with_high_count=sum(1 for v in sanitized_vendor_list if v['high'] > 0)
-        )
-    except TypeError as te:
-        # Catch the specific error if the helper function signature is wrong
-        if 'takes 1 positional argument but 2 were given' in str(te):
-             logging.error("Vendor analysis failed: get_vendor_data function needs update.", exc_info=True)
-             return render_template('error.html', error="Configuration Error: The vendor analysis helper function (get_vendor_data in utils/helpers.py) needs to be updated to accept the database model. Please contact the administrator.")
-        else:
-             # Re-raise other TypeErrors
-             logging.error(f"Error generating vendor analysis page: {te}", exc_info=True)
-             return render_template('error.html', error=f"An unexpected error occurred during vendor analysis: {te}")
-    except Exception as e:
-        # Catch other potential errors
-        logging.error(f"Error generating vendor analysis page: {e}", exc_info=True)
-        return render_template('error.html', error=f"An error occurred during vendor analysis: {e}")
-    finally:
-        # Ensure session is closed even if vendor_list was empty and returned early
-        if session is not None:
-            session.close()
-
-@app.route('/vulnerability_category/<category_slug>')
-def vulnerability_category(category_slug):
-    """Display CVEs for a specific vulnerability category."""
-    session = None # Initialize session to None
-    try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-
+        # --- TODO: Replace placeholder data with actual database query ---
         engine = create_local_cve_db()
         session = get_session(engine)
 
-        # Define category mapping
-        category_map = {
-            'sql-injection': {'name': 'SQL Injection', 'keywords': ['SQL Injection', 'CWE-89']},
-            'remote-code-execution': {'name': 'Remote Code Execution', 'keywords': ['Remote Code Execution', 'RCE', 'CWE-94']},
-            'cross-site-scripting': {'name': 'Cross-Site Scripting', 'keywords': ['Cross-Site Scripting', 'XSS', 'CWE-79']},
-            'authentication-bypass': {'name': 'Authentication Bypass', 'keywords': ['Authentication Bypass', 'CWE-287']},
-            'denial-of-service': {'name': 'Denial of Service', 'keywords': ['Denial of Service', 'DoS', 'CWE-400']},
-            'information-disclosure': {'name': 'Information Disclosure', 'keywords': ['Information Disclosure', 'CWE-200']},
-            'buffer-overflow': {'name': 'Buffer Overflow', 'keywords': ['Buffer Overflow', 'CWE-119', 'CWE-120']}
-        }
-
-        if category_slug not in category_map:
-            return render_template('error.html', error=f"Unknown vulnerability category: {category_slug}")
-
-        category_info = category_map[category_slug]
-        category_name = category_info['name']
-        keywords = category_info['keywords']
-
-        # Build query based on keywords
-        query = session.query(CVE_Model)
-        filters = []
-        for keyword in keywords:
-            filters.append(CVE_Model.description.ilike(f"%{keyword}%"))
-            if keyword.startswith('CWE-'):
-                filters.append(CVE_Model.cwe_id.ilike(f"%{keyword}%"))
-        query = query.filter(sa.or_(*filters))
-
-        # Debugging: Log the generated SQL query and keyword filters
-        logging.info(f"Category: {category_name}, Keywords: {keywords}")
-        logging.info(f"Generated SQL Query: {query}")
-
-        # Fetch all results for debugging
-        all_results = query.all()
-        logging.info(f"Total CVEs matching filters: {len(all_results)}")
-
-        # Pagination
-        page = request.args.get('page', 1, type=int)
-        per_page = 50  # Define per_page explicitly
-        total_cves = len(all_results)
-        total_pages = (total_cves + per_page - 1) // per_page
-
-        # Debugging: Log total CVEs and pagination details
-        logging.info(f"Total CVEs: {total_cves}, Total Pages: {total_pages}, Current Page: {page}")
-
-        # Ensure the current page is within valid bounds
-        if page < 1:
-            page = 1
-        elif page > total_pages and total_pages > 0:
-            page = total_pages
-
-        # Fetch paginated results
-        paginated_cves = all_results[(page - 1) * per_page: page * per_page]
-
-        # Debugging: Log the number of CVEs fetched for the current page
-        logging.info(f"CVEs fetched for page {page}: {len(paginated_cves)}")
-
-        # Handle case where no CVEs are found
-        if not paginated_cves and total_cves > 0:
-            return render_template('error.html', error="No CVEs found for the current page. Please try a different page.")
-
-        # Data for charts
-        severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
-        yearly_counts_dict = {}
-        all_category_cves = query.all()
-        for cve in all_category_cves:
-            sev = (cve.severity or 'UNKNOWN').upper()
-            if sev in severity_counts:
-                severity_counts[sev] += 1
-            else:
-                severity_counts["UNKNOWN"] += 1
-
-            if cve.published_date:
-                year = cve.published_date.year
-                yearly_counts_dict[year] = yearly_counts_dict.get(year, 0) + 1
-
-        yearly_labels = sorted(yearly_counts_dict.keys())
-        yearly_counts = [yearly_counts_dict[year] for year in yearly_labels]
-
-        # Calculate severity percentages
-        total_severity_count = sum(severity_counts.values())
-        severity_percents = {
-            key: round((value / total_severity_count) * 100, 2) if total_severity_count > 0 else 0
-            for key, value in severity_counts.items()
-        }
-
-        # NOTE: Check 'vulnerability_category.html' template.
-        # Ensure it correctly uses 'yearly_labels' and 'yearly_counts'
-        # (and other variables like severity_counts) with the |tojson filter.
-        # The "Object of type Undefined is not JSON serializable" error likely originates here.
-        return render_template('vulnerability_category.html',
-                               category_name=category_name,
-                               cves=paginated_cves,
-                               total_cves=total_cves,
-                               severity_counts=severity_counts,
-                               severity_percents=severity_percents,
-                               yearly_labels=yearly_labels,
-                               yearly_counts=yearly_counts,
-                               current_page=page,
-                               total_pages=total_pages,
-                               per_page=per_page,  # Pass per_page to the template
-                               category_slug=category_slug)
-    except Exception as e:
-        logging.error(f"Error generating vulnerability category page for {category_slug}: {e}", exc_info=True)
-        return render_template('error.html', error=f"An error occurred: {e}")
-    finally:
-        session.close()
-
-@app.route('/severity_distribution')
-def severity_distribution():
-    """Display the severity distribution of CVEs."""
-    session = None # Initialize session to None
-    try:
         if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
+             return render_template('error.html', error_message="Database model not initialized.")
 
-        engine = create_local_cve_db()
-        session = get_session(engine) # Assign session here
+        # Example: Query vendors based on CPE data (this can be complex and slow)
+        # This is a simplified example; real vendor extraction from CPE is non-trivial.
+        # You might need a dedicated vendor table or better parsing logic.
+        all_cpes = session.query(CVE_Model.cpe_affected).filter(CVE_Model.cpe_affected != '').all()
+        vendor_counts = {}
+        for cpe_string_tuple in all_cpes:
+            if cpe_string_tuple[0]:
+                cpes = cpe_string_tuple[0].split(',')
+                vendors_in_cve = set()  # Track vendors per CVE to avoid double counting
+                for cpe in cpes:
+                    # Basic CPE parsing: cpe:2.3:a:vendor:product:version:...
+                    parts = cpe.split(':')
+                    if len(parts) >= 4:
+                        vendor = parts[3]
+                        vendors_in_cve.add(vendor)
+                for vendor in vendors_in_cve:
+                     vendor_counts[vendor] = vendor_counts.get(vendor, 0) + 1
 
-        # Query to calculate severity distribution
-        severity_query = session.query(
-            CVE_Model.severity, func.count(CVE_Model.id)
-        ).group_by(CVE_Model.severity).all()
+        # Limit to top N vendors for performance/display
+        top_n = 50
+        sorted_vendors = dict(sorted(vendor_counts.items(), key=lambda item: item[1], reverse=True)[:top_n])
 
-        # Prepare severity counts
-        severity_counts = {
-            "CRITICAL": 0,
-            "HIGH": 0,
-            "MEDIUM": 0,
-            "LOW": 0,
-            "UNKNOWN": 0
-        }
-        total_count = 0
-        for severity, count in severity_query:
-            s_upper = (severity or 'UNKNOWN').upper()
-            if s_upper in severity_counts:
-                severity_counts[s_upper] = count
-            total_count += count
+        session.close()  # Close session after query
 
-        # Calculate percentages
-        severity_percents = {
-            key: round((value / total_count) * 100, 2) if total_count > 0 else 0
-            for key, value in severity_counts.items()
-        }
-
-        # Query to get yearly data
-        yearly_query = session.query(
-            extract('year', CVE_Model.published_date).label('year'),
-            func.count(CVE_Model.id).label('count')
-        ).filter(CVE_Model.published_date != None)\
-         .group_by('year')\
-         .order_by('year')\
-         .all()
-
-        # Process yearly data
-        yearly_labels = []
-        yearly_counts = []
-        for item in yearly_query:
-            if item.year:  # Ensure year is not None
-                yearly_labels.append(str(int(item.year)))
-                yearly_counts.append(item.count)
-
-        # Ensure all variables passed to the template are defined
-        # Standardize yearly data variable names
-        # NOTE: Check 'severity_distribution.html' template.
-        # Ensure it correctly uses 'yearly_labels' and 'yearly_counts'
-        # (and other variables like severity_counts) with the |tojson filter.
-        # The "Object of type Undefined is not JSON serializable" error likely originates here.
-        return render_template(
-            'severity_distribution.html',
-            severity_counts=severity_counts,
-            severity_percents=severity_percents,
-            total_count=total_count,
-            yearly_labels=yearly_labels,  # Standardized name
-            yearly_counts=yearly_counts, # Standardized name
-            yearly_data={},  # Empty dict as default (Consider removing if unused)
-            # Add other potential variables with defaults
-            top_vendor_names=[],
-            top_vendor_counts=[]
-        )
+        return render_template('vendor_analysis.html', vendors=sorted_vendors)
     except Exception as e:
-        logging.error(f"Error generating severity distribution page: {e}", exc_info=True)
-        return render_template('error.html', error=f"An error occurred: {e}")
-    finally:
-        # Ensure session is closed in the finally block
-        if session is not None:
-            session.close()
+        # Log the error for debugging purposes
+        logging.error(f"Error in /vendor_analysis route: {e}")
+        # Consider using Flask's logging for production: app.logger.error(f"Error in /vendor_analysis route: {e}")
 
-@app.route('/monthly_summary')
-def monthly_summary():
-    """Display a monthly summary of CVEs."""
-    session = None # Initialize session to None
-    try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-
-        engine = create_local_cve_db()
-        session = get_session(engine) # Assign session here
-
-        # Query to get counts per month/year
-        monthly_data = session.query(
-            extract('year', CVE_Model.published_date).label('year'),
-            extract('month', CVE_Model.published_date).label('month'),
-            func.count(CVE_Model.id).label('count')
-        ).filter(CVE_Model.published_date != None)\
-         .group_by('year', 'month')\
-         .order_by('year', 'month')\
-         .all()
-
-        # Process data for the chart - use standardized names
-        monthly_labels = []
-        monthly_counts = []
-        for item in monthly_data:
-            if item.year and item.month:  # Ensure year and month are not None
-                monthly_labels.append(f"{int(item.year)}-{int(item.month):02d}")  # Format as YYYY-MM
-                monthly_counts.append(item.count)
-
-        # Pass standardized variable names to the template
-        # NOTE: Check 'monthly_summary.html' template.
-        # Ensure it correctly uses 'monthly_labels' and 'monthly_counts'
-        # with the |tojson filter.
-        # The "Object of type Undefined is not JSON serializable" error likely originates here.
-        return render_template('monthly_summary.html',
-                               monthly_labels=monthly_labels,
-                               monthly_counts=monthly_counts)
-    except Exception as e:
-        logging.error(f"Error generating monthly summary page: {e}", exc_info=True)
-        return render_template('error.html', error=f"An error occurred: {e}")
-    finally:
-        # Ensure session is closed in the finally block
-        if session is not None:
-            session.close()
+        # Render a user-friendly error page
+        return render_template('error.html', error_message="An error occurred while loading vendor analysis data. Please try again later."), 500
 
 # Run the application
 if __name__ == '__main__':
@@ -846,3 +761,4 @@ if __name__ == '__main__':
             CVE_Model = create_cve_table(engine)
 
     app.run(debug=True, host='0.0.0.0', port=8080)
+

@@ -1,343 +1,137 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
 
-{% block title %}CVE Details - {{ cve.cve_id }}{% endblock %}
-
-{% block extra_head %}
-<style>
-    .cve-header {
-        background-color: #f8f9fa;
-        border-left: 5px solid #0d6efd; /* Accent color */
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        border-radius: 0.3rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .cve-header h1 {
-        font-size: 2rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    .cve-meta span {
-        margin-right: 1.5rem;
-        color: #6c757d; /* Muted text color */
-        font-size: 0.9rem;
-    }
-    .cve-meta i {
-        margin-right: 0.3rem;
-    }
-
-    .severity-badge {
-        font-size: 1rem;
-        padding: 0.5em 0.8em;
-        font-weight: 600;
-        border-radius: 0.25rem;
-        vertical-align: middle; /* Align badge nicely with text */
-    }
-    .badge-critical { background-color: #dc3545; color: white; }
-    .badge-high { background-color: #fd7e14; color: white; }
-    .badge-medium { background-color: #ffc107; color: #212529; }
-    .badge-low { background-color: #0dcaf0; color: #212529; }
-    .badge-unknown { background-color: #6c757d; color: white; }
-
-    .cvss-section {
-        text-align: center;
-        padding: 1.5rem;
-        border-radius: 0.3rem;
-        margin-bottom: 1.5rem;
-    }
-    .cvss-score {
-        font-size: 3rem;
-        font-weight: 700;
-        line-height: 1;
-        display: block;
-        margin-bottom: 0.5rem;
-    }
-    .cvss-vector {
-        font-family: monospace;
-        font-size: 0.85rem;
-        color: #6c757d;
-        word-break: break-all; /* Prevent long vectors from overflowing */
-    }
-    .cvss-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* Color coding for CVSS scores based on severity */
-    .cvss-critical { border: 1px solid #dc3545; background-color: #f8d7da; }
-    .cvss-critical .cvss-score { color: #dc3545; }
-    .cvss-high { border: 1px solid #fd7e14; background-color: #ffe5d0; }
-    .cvss-high .cvss-score { color: #fd7e14; }
-    .cvss-medium { border: 1px solid #ffc107; background-color: #fff3cd; }
-    .cvss-medium .cvss-score { color: #b88b00; } /* Darker yellow for text */
-    .cvss-low { border: 1px solid #0dcaf0; background-color: #cff4fc; }
-    .cvss-low .cvss-score { color: #0aa3bd; } /* Darker cyan for text */
-    .cvss-unknown { border: 1px solid #6c757d; background-color: #e2e3e5; }
-    .cvss-unknown .cvss-score { color: #6c757d; }
-
-    .info-card {
-        margin-bottom: 1.5rem;
-    }
-    .info-card .card-header {
-        font-weight: 600;
-        background-color: #e9ecef; /* Light grey header */
-    }
-    .info-card .list-group-item {
-        border: none;
-        padding: 0.5rem 1rem;
-    }
-    .info-card code {
-        font-size: 0.85em;
-        padding: 0.2em 0.4em;
-        background-color: #f1f1f1;
-        border-radius: 3px;
-    }
-    .reference-list a {
-        display: block;
-        margin-bottom: 0.3rem;
-        word-break: break-all; /* Prevent long URLs from overflowing */
-    }
-    .cpe-list {
-        max-height: 200px; /* Limit height for long lists */
-        overflow-y: auto;
-        font-size: 0.9rem;
-        background-color: #f8f9fa; /* Slight background for scrollable area */
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-    }
-    .cpe-list div {
-        margin-bottom: 0.2rem;
-    }
-
-    /* Simple Timeline */
-    .timeline {
-        list-style: none;
-        padding: 0;
-        position: relative;
-    }
-    .timeline::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 15px; /* Adjust based on icon size */
-        width: 2px;
-        background-color: #dee2e6;
-    }
-    .timeline-item {
-        margin-bottom: 1rem;
-        position: relative;
-        padding-left: 40px; /* Space for icon */
-    }
-    .timeline-icon {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        background-color: #0d6efd; /* Primary color */
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.9rem;
-    }
-    .timeline-content {
-        background-color: #f8f9fa;
-        padding: 0.8rem 1rem;
-        border-radius: 0.25rem;
-        border: 1px solid #dee2e6;
-    }
-    .timeline-content strong {
-        display: block;
-        margin-bottom: 0.2rem;
-    }
-    .timeline-content span {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-</style>
-{% endblock %}
+{% block title %}{{ cve.cve_id }} - CVE Details{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-
-    {% if cve %}
-    {# Determine severity class #}
-    {% set severity = cve.severity | upper if cve.severity else 'UNKNOWN' %}
-    {% set severity_class = 'badge-' + severity.lower() %}
-    {% set cvss_class = 'cvss-' + severity.lower() %}
-
-    {# Header Section #}
-    <div class="cve-header">
-        <h1>
-            {{ cve.cve_id }}
-            <span class="badge {{ severity_class }} severity-badge ms-2">{{ severity }}</span>
-        </h1>
-        <div class="cve-meta">
-            <span><i class="bi bi-calendar-event"></i> Published: {{ cve.published_date.strftime('%Y-%m-%d %H:%M:%S') if cve.published_date else 'N/A' }}</span>
-            <span><i class="bi bi-pencil-square"></i> Last Modified: {{ cve.last_modified_date.strftime('%Y-%m-%d %H:%M:%S') if cve.last_modified_date else 'N/A' }}</span>
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h1 class="h4 mb-0 text-primary"><i class="bi bi-bug me-2"></i>{{ cve.cve_id }}</h1>
+            {% if from_api %}
+                <span class="badge bg-info text-dark">Fetched from NVD API</span>
+            {% else %}
+                 <span class="badge bg-success">From Local Database</span>
+            {% endif %}
         </div>
-    </div>
+        <div class="card-body">
+            <!-- Severity and Scores -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <strong>Severity:</strong>
+                    {% if cve.severity == 'CRITICAL' %}
+                    <span class="badge rounded-pill badge-critical fs-6 ms-2"><i class="bi bi-exclamation-octagon-fill me-1"></i>Critical</span>
+                    {% elif cve.severity == 'HIGH' %}
+                    <span class="badge rounded-pill badge-high fs-6 ms-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>High</span>
+                    {% elif cve.severity == 'MEDIUM' %}
+                    <span class="badge rounded-pill badge-medium fs-6 ms-2"><i class="bi bi-exclamation-circle-fill me-1"></i>Medium</span>
+                    {% elif cve.severity == 'LOW' %}
+                    <span class="badge rounded-pill badge-low fs-6 ms-2"><i class="bi bi-info-circle-fill me-1"></i>Low</span>
+                    {% else %}
+                    <span class="badge rounded-pill badge-unknown fs-6 ms-2"><i class="bi bi-question-circle-fill me-1"></i>Unknown</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <strong>CVSS v3 Score:</strong>
+                    {% if cve.cvss_v3_score %}
+                        <span class="badge bg-dark ms-2">{{ cve.cvss_v3_score }}</span>
+                    {% else %}
+                        <span class="text-muted ms-2">N/A</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <strong>CVSS v2 Score:</strong>
+                     {% if cve.cvss_v2_score %}
+                        <span class="badge bg-secondary ms-2">{{ cve.cvss_v2_score }}</span>
+                    {% else %}
+                        <span class="text-muted ms-2">N/A</span>
+                    {% endif %}
+                </div>
+            </div>
 
-    <div class="row">
-        {# Left Column - Scores and Description #}
-        <div class="col-lg-8">
-            {# CVSS Scores #}
-            <div class="row mb-4">
+            <!-- Dates -->
+            <div class="row mb-3">
                 <div class="col-md-6">
-                    {% if cve.cvss_v3_score is not none %}
-                    <div class="cvss-section {{ cvss_class }}">
-                        <span class="cvss-score">{{ "%.1f"|format(cve.cvss_v3_score) }}</span>
-                        <span class="cvss-label">CVSS v3.x Score</span>
-                        {# Add vector string if available - needs adjustment based on actual data structure #}
-                        {# <span class="cvss-vector">{{ cve.cvss_v3_vector | default('Vector not available') }}</span> #}
-                    </div>
-                    {% else %}
-                    <div class="cvss-section cvss-unknown">
-                        <span class="cvss-score">N/A</span>
-                        <span class="cvss-label">CVSS v3.x Score</span>
-                    </div>
-                    {% endif %}
+                    <strong>Published Date:</strong>
+                    <span class="ms-2">{{ cve.published_date.strftime('%Y-%m-%d %H:%M:%S') if cve.published_date else 'N/A' }}</span>
                 </div>
                 <div class="col-md-6">
-                    {% if cve.cvss_v2_score is not none %}
-                    <div class="cvss-section {{ cvss_class }}"> {# Use same severity class for consistency #}
-                        <span class="cvss-score">{{ "%.1f"|format(cve.cvss_v2_score) }}</span>
-                        <span class="cvss-label">CVSS v2.0 Score</span>
-                         {# Add vector string if available - needs adjustment based on actual data structure #}
-                        {# <span class="cvss-vector">{{ cve.cvss_v2_vector | default('Vector not available') }}</span> #}
-                   </div>
-                    {% else %}
-                    <div class="cvss-section cvss-unknown">
-                        <span class="cvss-score">N/A</span>
-                        <span class="cvss-label">CVSS v2.0 Score</span>
-                    </div>
-                    {% endif %}
+                    <strong>Last Modified:</strong>
+                    <span class="ms-2">{{ cve.last_modified_date.strftime('%Y-%m-%d %H:%M:%S') if cve.last_modified_date else 'N/A' }}</span>
                 </div>
             </div>
 
-            {# Description Card #}
-            <div class="card info-card">
-                <div class="card-header"><i class="bi bi-file-text me-2"></i>Description</div>
-                <div class="card-body">
-                    <p>{{ cve.description | default('No description available.') }}</p>
-                </div>
+            <!-- Description -->
+            <div class="mb-4">
+                <h5 class="text-secondary"><i class="bi bi-file-text me-2"></i>Description</h5>
+                <p class="text-body bg-light p-3 rounded">{{ cve.description | safe }}</p>
             </div>
 
-            {# Affected Configurations (CPEs) Card #}
-            <div class="card info-card">
-                <div class="card-header"><i class="bi bi-gear-wide-connected me-2"></i>Affected Configurations (CPEs)</div>
-                <div class="card-body">
-                    {% if cve.cpe_affected %}
-                        <div class="cpe-list">
-                        {% for cpe in cve.cpe_affected.split(',') %}
-                            {% if cpe.strip() %}
-                            <div><code>{{ cpe.strip() }}</code></div>
-                            {% endif %}
-                        {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No specific configurations listed.</p>
-                    {% endif %}
-                </div>
+            <!-- CWE -->
+            {% if cve.cwe_id %}
+            <div class="mb-4">
+                <h5 class="text-secondary"><i class="bi bi-diagram-3 me-2"></i>Weakness Enumeration (CWE)</h5>
+                {# Assuming cwe_id is a comma-separated string #}
+                {% set cwe_list = cve.cwe_id.split(',') %}
+                {% for cwe in cwe_list %}
+                    <span class="badge bg-light text-dark border me-1 mb-1 p-2">{{ cwe.strip() }}</span>
+                {% endfor %}
             </div>
-        </div>
+            {% endif %}
 
-        {# Right Column - Details and References #}
-        <div class="col-lg-4">
-            {# Key Details Card #}
-            <div class="card info-card">
-                <div class="card-header"><i class="bi bi-info-circle me-2"></i>Key Details</div>
+            <!-- References -->
+            {% if cve.references %}
+            <div class="mb-4">
+                <h5 class="text-secondary"><i class="bi bi-link-45deg me-2"></i>References</h5>
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Weakness (CWE)
-                        <span>
-                            {% if cve.cwe_id %}
-                                {# Link CWE ID if possible - requires a base URL #}
-                                {# Example: <a href="https://cwe.mitre.org/data/definitions/{{ cve.cwe_id.split('-')[-1] }}.html" target="_blank"><code>{{ cve.cwe_id }}</code></a> #}
-                                <code>{{ cve.cwe_id }}</code>
-                            {% else %}
-                                <span class="text-muted">N/A</span>
-                            {% endif %}
-                        </span>
-                    </li>
-                    {# Add more key details if available in your data model #}
-                    {# Example:
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Exploit Available?
-                        <span>{% if cve.has_exploit %}Yes{% else %}No{% endif %}</span>
-                    </li>
-                    #}
+                    {# Assuming references is a comma-separated string #}
+                    {% set ref_list = cve.references.split(',') %}
+                    {% for ref in ref_list %}
+                        {% if ref.strip() %}
+                        <li class="list-group-item px-0 py-1">
+                            <a href="{{ ref.strip() }}" target="_blank" rel="noopener noreferrer">{{ ref.strip() }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
                 </ul>
             </div>
+            {% endif %}
 
-            {# References Card #}
-            <div class="card info-card">
-                <div class="card-header"><i class="bi bi-link-45deg me-2"></i>References</div>
-                <div class="card-body reference-list">
-                    {% if cve.references %}
-                        {% for ref in cve.references.split(',') %}
-                            {% if ref.strip() %}
-                            <a href="{{ ref.strip() }}" target="_blank" rel="noopener noreferrer">{{ ref.strip() }}</a>
-                            {% endif %}
+            <!-- CPE Affected -->
+            {% if cve.cpe_affected %}
+             <div class="mb-4">
+                <h5 class="text-secondary"><i class="bi bi-cpu me-2"></i>Affected Configurations (CPE)</h5>
+                <div style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
+                    <ul class="list-unstyled mb-0 small">
+                         {# Assuming cpe_affected is a comma-separated string #}
+                        {% set cpe_list = cve.cpe_affected.split(',') %}
+                        {% for cpe in cpe_list %}
+                             {% if cpe.strip() %}
+                            <li><code>{{ cpe.strip() }}</code></li>
+                             {% endif %}
                         {% endfor %}
-                    {% else %}
-                        <p class="text-muted">No references listed.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            {# Timeline Card #}
-             <div class="card info-card">
-                <div class="card-header"><i class="bi bi-clock-history me-2"></i>Timeline</div>
-                <div class="card-body">
-                    <ul class="timeline">
-                        {% if cve.published_date %}
-                        <li class="timeline-item">
-                            <div class="timeline-icon"><i class="bi bi-calendar-plus"></i></div>
-                            <div class="timeline-content">
-                                <strong>Published</strong>
-                                <span>{{ cve.published_date.strftime('%Y-%m-%d %H:%M:%S') }}</span>
-                            </div>
-                        </li>
-                        {% endif %}
-                         {% if cve.last_modified_date %}
-                        <li class="timeline-item">
-                            <div class="timeline-icon"><i class="bi bi-pencil"></i></div>
-                            <div class="timeline-content">
-                                <strong>Last Modified</strong>
-                                <span>{{ cve.last_modified_date.strftime('%Y-%m-%d %H:%M:%S') }}</span>
-                            </div>
-                        </li>
-                        {% endif %}
                     </ul>
                 </div>
             </div>
+            {% endif %}
 
+            <div class="mt-4">
+                 <a href="{{ request.referrer or url_for('index') }}" class="btn btn-outline-secondary">
+                     <i class="bi bi-arrow-left me-1"></i>Back
+                 </a>
+            </div>
         </div>
     </div>
-
-    {% else %}
-    <div class="alert alert-warning" role="alert">
-      CVE details could not be loaded or the CVE ID was not found.
-    </div>
-    {% endif %}
-
 </div>
 {% endblock %}
 
-{% block scripts %}
-{# Add any specific JS needed for this page, e.g., for charts or interactions #}
-<script>
-    // Example: Initialize tooltips if you add any
-    // var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    // var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    //   return new bootstrap.Tooltip(tooltipTriggerEl)
-    // })
-</script>
+{% block extra_head %}
+{# Reuse badge styles from index.html if needed, or define here #}
+<style>
+    .badge-critical { background-color: #dc3545; }
+    .badge-high { background-color: #fd7e14; }
+    .badge-medium { background-color: #ffc107; color: #000 !important; } /* Ensure text is dark */
+    .badge-low { background-color: #0dcaf0; color: #000 !important; } /* Ensure text is dark */
+    .badge-unknown { background-color: #6c757d; }
+    code { font-size: 0.8em; }
+</style>
 {% endblock %}
