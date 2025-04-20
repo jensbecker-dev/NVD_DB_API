@@ -1,19 +1,18 @@
-# NVD CVE Database API
+# NVD CVE Database Explorer
 
-<img src="static/logo.png" alt="NVD CVE Database Logo" width="200">
+<div align="center">
+  <img src="static/logo.png" alt="NVD CVE Database Explorer Logo" width="200">
+  <br>
+  <br>
+  <strong>A comprehensive solution for security vulnerability analysis</strong>
+</div>
 
 ## Overview
-This application provides a comprehensive platform for analyzing and managing security vulnerabilities from the National Vulnerability Database (NVD). With a user-friendly web interface and powerful API endpoints, it supports security experts in assessing vulnerabilities and facilitates the identification of risks in digital environments.
 
-## Purpose
-In the constantly changing landscape of cybersecurity, professionals need reliable and up-to-date information about security vulnerabilities. This tool optimizes:
-- Rapid identification of CVE details
-- Analysis of affected systems and products
-- Access to vulnerability information even without internet connection
-- Visual representation of vulnerability trends and statistics
-- Efficient assessment of vendors' security posture
+NVD CVE Database Explorer is a powerful web application for managing, analyzing, and visualizing security vulnerabilities from the National Vulnerability Database (NVD). The application provides a user-friendly interface for security experts to assess vulnerabilities and identify risks in digital environments.
 
-## Main Features
+## Key Features
+
 - **Intuitive Search Interface**: Quick search for CVE IDs, vendors, products, or keywords
 - **Comprehensive Data Visualization**: Graphical representation of severity distributions and temporal trends
 - **Local Database**: SQLite database for offline access to CVE information
@@ -24,7 +23,7 @@ In the constantly changing landscape of cybersecurity, professionals need reliab
 - **Category-based Filtering**: Focused search for specific vulnerability types
 - **Monthly Summaries**: Overview of vulnerability trends over time
 
-### Statistical Evaluations
+## Statistical Analysis
 
 ![Dashboard](screenshots/dashboard.png)
 
@@ -32,8 +31,8 @@ In the constantly changing landscape of cybersecurity, professionals need reliab
 
 ```bash
 # Clone repository
-git clone https://github.com/jensbecker-dev/nvd-db-api.git
-cd nvd-db-api
+git clone https://github.com/yourusername/nvd-cve-database-explorer.git
+cd nvd-cve-database-explorer
 
 # Install dependencies
 pip install -r requirements.txt
