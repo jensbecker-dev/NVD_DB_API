@@ -703,6 +703,26 @@ def get_exploitdb_status():
             'message': str(e)
         }), 500
 
+@app.route('/verify_exploits')
+def verify_exploits():
+    """Verify the integrity of all downloaded exploits and repair if needed"""
+    try:
+        from modules.additional_sources import ExploitDBAdapter
+        
+        # Run verification with auto-repair
+        verification_results = ExploitDBAdapter.verify_all_exploits(repair=True)
+        
+        return render_template('exploits_verification.html', 
+                              results=verification_results,
+                              status={
+                                  'success': f"Verification complete: {verification_results['valid']} valid, {verification_results['invalid']} invalid, {verification_results['repaired']} repaired"
+                              })
+    
+    except Exception as e:
+        logging.error(f"Error verifying exploits: {e}")
+        return render_template('error.html', 
+                              error_message=f"Failed to verify exploits: {str(e)}")
+
 @app.route('/vulnerability_category/<string:category_slug>')
 def vulnerability_category(category_slug):
     """Display CVEs belonging to a specific vulnerability category."""
