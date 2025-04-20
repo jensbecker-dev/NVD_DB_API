@@ -7,107 +7,139 @@
     .chart-container {
         position: relative;
         height: 400px;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
     }
-    
+
     .severity-card {
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-        margin-bottom: 20px;
+        border: none;
+        border-radius: 0.8rem;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
     }
-    
+
     .severity-card:hover {
         transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     }
-    
+
     .severity-card .card-body {
         padding: 1.5rem;
     }
-    
+
     .severity-card .percentage {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: bold;
+        line-height: 1.2;
     }
-    
+
+    .severity-card .card-text {
+        font-size: 0.95rem;
+        opacity: 0.9;
+    }
+
     .severity-critical {
-        background-color: #dc3545;
+        background: linear-gradient(135deg, #dc3545, #a71d2a);
         color: white;
     }
-    
+
     .severity-high {
-        background-color: #fd7e14;
+        background: linear-gradient(135deg, #fd7e14, #c65e0a);
         color: white;
     }
-    
+
     .severity-medium {
-        background-color: #ffc107;
+        background: linear-gradient(135deg, #ffc107, #d39e00);
         color: #343a40;
     }
-    
+
     .severity-low {
-        background-color: #0dcaf0;
+        background: linear-gradient(135deg, #0dcaf0, #0a9cb5);
         color: #343a40;
     }
-    
+
     .severity-unknown {
-        background-color: #6c757d;
+        background: linear-gradient(135deg, #6c757d, #4a5157);
         color: white;
     }
-    
+
     .severity-stats {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
-    
-    /* Legend styling */
+
+    .severity-stats strong {
+        font-weight: 600;
+    }
+
     .custom-legend {
         display: flex;
         justify-content: center;
         flex-wrap: wrap;
-        margin-bottom: 1rem;
+        padding: 0.5rem 0;
+        margin-bottom: 0;
     }
-    
+
     .legend-item {
         display: flex;
         align-items: center;
-        margin-right: 20px;
-        margin-bottom: 10px;
+        margin: 5px 15px;
     }
-    
+
     .legend-color {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         border-radius: 4px;
-        margin-right: 5px;
+        margin-right: 8px;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 500;
+    }
+
+    h1 {
+        color: #343a40;
+        font-weight: 600;
+    }
+
+    .breadcrumb {
+        background-color: transparent;
+        padding-left: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <nav aria-label="breadcrumb" class="mt-3">
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
-            <li class="breadcrumb-item active">Severity Distribution</li>
+            <li class="breadcrumb-item active" aria-current="page">Severity Distribution</li>
         </ol>
     </nav>
 
     <h1 class="mb-4">CVE Severity Distribution</h1>
-    
+
     <!-- Severity Distribution Summary -->
-    <div class="row mb-4">
+    <div class="row mb-4 g-4">
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
                     <h5 class="card-title mb-0">Overall Severity Distribution</h5>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
+                <div class="card-body d-flex flex-column">
+                    <div class="chart-container flex-grow-1">
                         <canvas id="severityPieChart"></canvas>
                     </div>
-                </div>
-                <div class="card-footer bg-white">
-                    <div class="custom-legend">
+                    <div class="custom-legend mt-3">
                         <div class="legend-item">
                             <div class="legend-color" style="background-color: #dc3545;"></div>
                             <span>Critical</span>
@@ -133,34 +165,34 @@
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Summary</h5>
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Summary Statistics</h5>
                 </div>
                 <div class="card-body">
                     <div class="severity-stats">
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                             <div>Total CVEs:</div>
                             <div><strong>{{ total_cves }}</strong></div>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <div>Critical:</div>
+                            <div><span class="legend-color me-2" style="background-color: #dc3545;"></span>Critical:</div>
                             <div><strong>{{ severity_counts.CRITICAL }}</strong> ({{ severity_percents.CRITICAL }}%)</div>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <div>High:</div>
+                            <div><span class="legend-color me-2" style="background-color: #fd7e14;"></span>High:</div>
                             <div><strong>{{ severity_counts.HIGH }}</strong> ({{ severity_percents.HIGH }}%)</div>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <div>Medium:</div>
+                            <div><span class="legend-color me-2" style="background-color: #ffc107;"></span>Medium:</div>
                             <div><strong>{{ severity_counts.MEDIUM }}</strong> ({{ severity_percents.MEDIUM }}%)</div>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <div>Low:</div>
+                            <div><span class="legend-color me-2" style="background-color: #0dcaf0;"></span>Low:</div>
                             <div><strong>{{ severity_counts.LOW }}</strong> ({{ severity_percents.LOW }}%)</div>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <div>Unknown:</div>
+                            <div><span class="legend-color me-2" style="background-color: #6c757d;"></span>Unknown:</div>
                             <div><strong>{{ severity_counts.UNKNOWN }}</strong> ({{ severity_percents.UNKNOWN }}%)</div>
                         </div>
                     </div>
@@ -170,47 +202,48 @@
     </div>
 
     <!-- Severity Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <div class="card severity-card severity-critical">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Critical</h3>
+    <h2 class="mb-3 h4">Severity Breakdown</h2>
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-4 mb-4">
+        <div class="col">
+            <div class="card severity-card severity-critical h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h3 class="card-title h5">Critical</h3>
                     <div class="percentage mb-2">{{ severity_percents.CRITICAL }}%</div>
                     <p class="card-text mb-0">{{ severity_counts.CRITICAL }} vulnerabilities</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card severity-card severity-high">
-                <div class="card-body text-center">
-                    <h3 class="card-title">High</h3>
+        <div class="col">
+            <div class="card severity-card severity-high h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h3 class="card-title h5">High</h3>
                     <div class="percentage mb-2">{{ severity_percents.HIGH }}%</div>
                     <p class="card-text mb-0">{{ severity_counts.HIGH }} vulnerabilities</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-3">
-            <div class="card severity-card severity-medium">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Medium</h3>
+        <div class="col">
+            <div class="card severity-card severity-medium h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h3 class="card-title h5">Medium</h3>
                     <div class="percentage mb-2">{{ severity_percents.MEDIUM }}%</div>
                     <p class="card-text mb-0">{{ severity_counts.MEDIUM }} vulnerabilities</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <div class="card severity-card severity-low">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Low</h3>
+        <div class="col">
+            <div class="card severity-card severity-low h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h3 class="card-title h5">Low</h3>
                     <div class="percentage mb-2">{{ severity_percents.LOW }}%</div>
                     <p class="card-text mb-0">{{ severity_counts.LOW }} vulnerabilities</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
-            <div class="card severity-card severity-unknown">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Unknown</h3>
+        <div class="col">
+            <div class="card severity-card severity-unknown h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h3 class="card-title h5">Unknown</h3>
                     <div class="percentage mb-2">{{ severity_percents.UNKNOWN }}%</div>
                     <p class="card-text mb-0">{{ severity_counts.UNKNOWN }} vulnerabilities</p>
                 </div>
@@ -220,7 +253,7 @@
 
     <!-- Severity Trend Over Time -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
+        <div class="card-header">
             <h5 class="card-title mb-0">Severity Trends Over Time</h5>
         </div>
         <div class="card-body">
@@ -232,7 +265,7 @@
 
     <!-- CVSS Score Distribution -->
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
+        <div class="card-header">
             <h5 class="card-title mb-0">CVSS Score Distribution</h5>
         </div>
         <div class="card-body">
@@ -241,16 +274,6 @@
             </div>
         </div>
     </div>
-
-    <!-- New Severity Distribution Section -->
-    <div class="container">
-        <h2>Severity Distribution</h2>
-        <ul>
-            {% for severity, percent in severity_percents.items() %}
-                <li>{{ severity }}: {{ percent }}%</li>
-            {% endfor %}
-        </ul>
-    </div>
 </div>
 {% endblock %}
 
@@ -258,7 +281,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Colors for charts
     const colors = {
         critical: '#dc3545',
         high: '#fd7e14',
@@ -269,13 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
         highLight: 'rgba(253, 126, 20, 0.7)',
         mediumLight: 'rgba(255, 193, 7, 0.7)',
         lowLight: 'rgba(13, 202, 240, 0.7)',
-        unknownLight: 'rgba(108, 117, 125, 0.7)'
+        unknownLight: 'rgba(108, 117, 125, 0.7)',
+        cvssBlue: 'rgba(54, 162, 235, 0.6)',
+        cvssBlueBorder: 'rgba(54, 162, 235, 1)'
     };
-    
-    // Severity Pie Chart
+
     const pieCtx = document.getElementById('severityPieChart').getContext('2d');
     new Chart(pieCtx, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
             labels: ['Critical', 'High', 'Medium', 'Low', 'Unknown'],
             datasets: [{
@@ -293,28 +316,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     colors.low,
                     colors.unknown
                 ],
-                borderWidth: 1
+                borderColor: '#ffffff',
+                borderWidth: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '60%',
             plugins: {
                 legend: {
                     display: false
                 },
-                title: {
-                    display: true,
-                    text: 'Vulnerability Severity Distribution',
-                    font: {
-                        size: 16
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                const value = context.parsed;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                label += `${value} (${percentage}%)`;
+                            }
+                            return label;
+                        }
                     }
                 }
             }
         }
     });
-    
-    // Severity Trend by Year Chart
+
     const trendCtx = document.getElementById('severityTrendChart').getContext('2d');
     new Chart(trendCtx, {
         type: 'line',
@@ -327,7 +361,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: colors.criticalLight,
                     borderColor: colors.critical,
                     borderWidth: 2,
-                    tension: 0.1
+                    tension: 0.3,
+                    pointBackgroundColor: colors.critical,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 },
                 {
                     label: 'High',
@@ -335,7 +372,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: colors.highLight,
                     borderColor: colors.high,
                     borderWidth: 2,
-                    tension: 0.1
+                    tension: 0.3,
+                    pointBackgroundColor: colors.high,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 },
                 {
                     label: 'Medium',
@@ -343,7 +383,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: colors.mediumLight,
                     borderColor: colors.medium,
                     borderWidth: 2,
-                    tension: 0.1
+                    tension: 0.3,
+                    pointBackgroundColor: colors.medium,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 },
                 {
                     label: 'Low',
@@ -351,7 +394,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: colors.lowLight,
                     borderColor: colors.low,
                     borderWidth: 2,
-                    tension: 0.1
+                    tension: 0.3,
+                    pointBackgroundColor: colors.low,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 },
                 {
                     label: 'Unknown',
@@ -359,7 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     backgroundColor: colors.unknownLight,
                     borderColor: colors.unknown,
                     borderWidth: 2,
-                    tension: 0.1
+                    tension: 0.3,
+                    pointBackgroundColor: colors.unknown,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 }
             ]
         },
@@ -372,28 +421,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     title: {
                         display: true,
                         text: 'Number of CVEs'
+                    },
+                    grid: {
+                        color: '#e9ecef'
                     }
                 },
                 x: {
                     title: {
                         display: true,
                         text: 'Year'
+                    },
+                    grid: {
+                        display: false
                     }
                 }
             },
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Yearly Severity Trends',
-                    font: {
-                        size: 16
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
                     }
                 }
             }
         }
     });
-    
-    // CVSS Score Distribution
+
     const cvssCtx = document.getElementById('cvssDistributionChart').getContext('2d');
     new Chart(cvssCtx, {
         type: 'bar',
@@ -402,9 +456,10 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [{
                 label: 'Number of CVEs',
                 data: {{ cvss_ranges|tojson }},
-                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
+                backgroundColor: colors.cvssBlue,
+                borderColor: colors.cvssBlueBorder,
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
@@ -416,22 +471,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     title: {
                         display: true,
                         text: 'Number of CVEs'
+                    },
+                    grid: {
+                        color: '#e9ecef'
                     }
                 },
                 x: {
                     title: {
                         display: true,
                         text: 'CVSS Score Range'
+                    },
+                    grid: {
+                        display: false
                     }
                 }
             },
             plugins: {
-                title: {
-                    display: true,
-                    text: 'CVSS Score Distribution',
-                    font: {
-                        size: 16
-                    }
+                legend: {
+                    display: false
                 }
             }
         }
