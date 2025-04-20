@@ -4,41 +4,79 @@
 
 {% block head_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!--
+    *******************************************************************
+    * IMPORTANT: Font Awesome icons require the Font Awesome CSS      *
+    * library to be loaded, typically in your base.html <head>.       *
+    * Example:                                                        *
+    * <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.x.x/css/all.min.css"> *
+    * (Replace 6.x.x with the desired version)                        *
+    *******************************************************************
+-->
+
 <style>
     .vendor-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
         padding: 20px;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
         background-color: #ffffff;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.06);
         transition: all 0.3s ease;
         display: flex;
         flex-direction: column;
         height: 100%;
+        border-top: 3px solid #0d6efd;
     }
     .vendor-card:hover {
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        transform: translateY(-4px);
     }
+
     .vendor-header {
-        display: flex;
+        margin-bottom: 18px;
+    }
+
+    .vendor-badge {
+        display: inline-flex;
         align-items: center;
-        margin-bottom: 15px;
-    }
-    .vendor-icon {
-        font-size: 2em;
-        color: #6c757d;
-        margin-right: 15px;
-        min-width: 40px;
-        text-align: center;
-    }
-    .vendor-name {
+        padding: 0.6em 1em;
+        font-size: 1.2em;
         font-weight: 600;
-        font-size: 1.25em;
-        color: #343a40;
-        margin-bottom: 0;
+        line-height: 1;
+        color: #ffffff;
+        background-color: #0d6efd;
+        border-radius: 0.5rem;
+        border: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
     }
+
+    .vendor-badge i {
+        font-size: 1.15em;
+        margin-right: 0.6em;
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1;
+    }
+
+    .vendor-badge .fa-microsoft { color: #ffffff; }
+    .vendor-badge .fa-apple { color: #ffffff; }
+    .vendor-badge .fa-google { color: #ffffff; }
+    .vendor-badge .fa-linux { color: #FCC624; }
+    .vendor-badge .fa-java { color: #f89820; }
+    .vendor-badge .fa-adobe { color: #FF0000; }
+    .vendor-badge .fa-aws { color: #FF9900; }
+    .vendor-badge .fa-debian { color: #A80030; }
+    .vendor-badge .fa-redhat { color: #EE0000; }
+    .vendor-badge .fa-ubuntu { color: #E95420; }
+    .vendor-badge .fa-firefox-browser { color: #FF7139; }
+    .vendor-badge .fa-building { color: rgba(255, 255, 255, 0.85); }
+    .vendor-badge .fa-network-wired { color: rgba(255, 255, 255, 0.85); }
+
     .vendor-count {
         font-size: 1.1em;
         color: #495057;
@@ -111,13 +149,17 @@
     }
 
     @media (max-width: 767px) {
-        .vendor-header {
-            flex-direction: column;
-            align-items: flex-start;
+        .vendor-card {
+            margin-bottom: 25px;
+            border-top-width: 2px;
         }
-        .vendor-icon {
-            margin-bottom: 10px;
-            margin-right: 0;
+        .vendor-badge {
+            font-size: 1.1em;
+            padding: 0.55em 0.9em;
+        }
+        .vendor-badge i {
+            font-size: 1.1em;
+            margin-right: 0.5em;
         }
     }
 </style>
@@ -142,10 +184,37 @@
             <div class="col-md-6 col-lg-4 d-flex align-items-stretch">
                 <div class="vendor-card">
                     <div class="vendor-header">
-                        <div class="vendor-icon">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <h3 class="vendor-name">{{ vendor }}</h3>
+                        <span class="vendor-badge" title="{{ vendor }}">
+                            {% set vendor_lower = vendor|lower %}
+                            {% if 'microsoft' in vendor_lower %}
+                                <i class="fab fa-microsoft"></i>
+                            {% elif 'google' in vendor_lower or 'android' in vendor_lower %}
+                                <i class="fab fa-google"></i>
+                            {% elif 'apple' in vendor_lower or 'macos' in vendor_lower or 'ios' in vendor_lower %}
+                                <i class="fab fa-apple"></i>
+                            {% elif 'linux' in vendor_lower %}
+                                <i class="fab fa-linux"></i>
+                            {% elif 'oracle' in vendor_lower or 'sun' in vendor_lower or 'java' in vendor_lower %}
+                                <i class="fab fa-java"></i>
+                            {% elif 'cisco' in vendor_lower %}
+                                <i class="fas fa-network-wired"></i>
+                            {% elif 'adobe' in vendor_lower %}
+                                <i class="fab fa-adobe"></i>
+                            {% elif 'amazon' in vendor_lower or 'aws' in vendor_lower %}
+                                <i class="fab fa-aws"></i>
+                            {% elif 'debian' in vendor_lower %}
+                                <i class="fab fa-debian"></i>
+                            {% elif 'redhat' in vendor_lower or 'red hat' in vendor_lower %}
+                                <i class="fab fa-redhat"></i>
+                            {% elif 'ubuntu' in vendor_lower %}
+                                <i class="fab fa-ubuntu"></i>
+                            {% elif 'mozilla' in vendor_lower or 'firefox' in vendor_lower %}
+                                <i class="fab fa-firefox-browser"></i>
+                            {% else %}
+                                <i class="fas fa-building"></i>
+                            {% endif %}
+                            {{ vendor }}
+                        </span>
                     </div>
                     <div class="vendor-count">
                         <i class="fas fa-shield-alt me-1 text-muted"></i><strong>Total CVEs:</strong> {{ details.count }}
@@ -215,7 +284,6 @@
             return;
         }
 
-        // *** 1. Verify Chart.js is loaded ***
         console.log("Type of Chart object:", typeof Chart);
         if (typeof Chart === 'undefined') {
              console.error("Chart.js library not loaded or failed to load.");
@@ -224,36 +292,6 @@
             }
             return;
         }
-
-        // *** 2. Minimal Hardcoded Chart Test (Uncomment to test) ***
-        /*
-        try {
-            console.log("Attempting to render minimal hardcoded chart...");
-            const minimalChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Test A', 'Test B', 'Test C'],
-                    datasets: [{
-                        label: 'Minimal Test',
-                        data: [10, 20, 15],
-                        backgroundColor: ['red', 'blue', 'green']
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-            console.log("Minimal hardcoded chart rendered successfully.");
-            // If this works, comment it out again and focus on the dynamic data below.
-            // return; // Stop here if you just want to test the minimal chart
-        } catch (minimalError) {
-            console.error("Error rendering minimal hardcoded chart:", minimalError);
-            if(chartContainer) {
-                chartContainer.innerHTML = '<div class="alert alert-danger text-center" role="alert"><strong>Critical Error:</strong> Failed even to render a minimal test chart. Check Chart.js setup.</div>';
-            }
-            return; // Stop if even the minimal chart fails
-        }
-        */
-        // *** End of Minimal Test ***
-
 
         const chartDataJson = '{{ chart_json | safe }}';
         let chartData;
@@ -321,7 +359,6 @@
             console.log("Chart Data Object:", JSON.stringify(finalChartData, null, 2));
             console.log("Chart Options Object:", JSON.stringify(finalChartOptions, null, 2));
             console.log("Data array specifically:", finalChartData.datasets[0].data);
-
 
             try {
                 const vendorChart = new Chart(ctx, {
