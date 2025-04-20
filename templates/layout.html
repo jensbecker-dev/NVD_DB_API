@@ -12,9 +12,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         :root {
-            --sidebar-width: 280px; /* Breitere Sidebar */
+            --sidebar-width: 280px; 
             --primary-dark: #212529;
             --accent-color: #0d6efd;
+            --accent-color-rgb: 13, 110, 253; /* RGB for box-shadow */
         }
         
         body {
@@ -31,6 +32,17 @@
         }
         
         /* Logo Styling */
+        @keyframes logoFadeInScale {
+          from {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
         .logo-container {
             display: flex;
             align-items: center;
@@ -39,17 +51,26 @@
         }
         
         .logo-img {
-            width: 100%; /* Fill the entire sidebar width */
-            max-width: 200px; /* Maximum size control */
-            height: auto; /* Maintain aspect ratio */
-            transition: all 0.3s ease;
-            margin-bottom: 15px; /* More space below logo */
-            padding: 10px; /* Add padding around the logo */
+            width: 100%; 
+            max-width: 180px; /* Slightly smaller max-width */
+            height: auto; 
+            margin-bottom: 15px; 
+            padding: 5px; /* Reduced padding */
+            /* Updated transition for smoother effects */
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                        filter 0.4s ease-out, 
+                        box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            /* Use a fade-in scale animation */
+            animation: logoFadeInScale 0.7s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+            opacity: 0; 
+            animation-delay: 0.1s; 
+            border-radius: 4px; /* Slightly rounded corners */
         }
         
         .logo-img:hover {
-            transform: scale(1.05);
-            filter: brightness(1.2);
+            transform: scale(1.04); /* More subtle scale */
+            /* Refined shadow using accent color for a professional glow */
+            box-shadow: 0 4px 12px rgba(var(--accent-color-rgb, 13, 110, 253), 0.2);
         }
         
         /* Sidebar Header improved styling */
