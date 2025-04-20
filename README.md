@@ -1,6 +1,6 @@
 # NVD CVE Database API
 
-<img src="static/logo.png" alt="NVD CVE Database Logo" width="100">
+<img src="static/logo.png" alt="NVD CVE Database Logo" width="200">
 
 ## Overview
 This application provides a comprehensive platform for analyzing and managing security vulnerabilities from the National Vulnerability Database (NVD). With a user-friendly web interface and powerful API endpoints, it supports security experts in assessing vulnerabilities and facilitates the identification of risks in digital environments.
