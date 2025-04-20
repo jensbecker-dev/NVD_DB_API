@@ -22,7 +22,7 @@ NVD CVE Database Explorer is a powerful web application for managing, analyzing,
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/nvd-cve-database-explorer.git
+git clone https://github.com/jensbecker-dev/nvd-cve-database-explorer.git
 cd nvd-cve-database-explorer
 
 # Install dependencies
