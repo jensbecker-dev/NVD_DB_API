@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Dashboard Header -->
-    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
         <h1 class="h2 mb-0">
             <i class="bi bi-speedometer2 me-2" style="color: var(--primary-color);"></i>Security Dashboard
         </h1>
@@ -15,17 +15,17 @@
     </div>
     
     <!-- CVE Stats Cards -->
-    <div class="row g-4 mb-5">
+    <div class="row g-3 mb-4">
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 border-0">
-                <div class="card-body position-relative p-4 d-flex flex-column"
+                <div class="card-body position-relative p-3 d-flex flex-column"
                      style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%); border-radius: var(--border-radius);">
-                    <div class="position-absolute top-0 end-0 mt-3 me-3 opacity-75">
-                        <i class="bi bi-shield-lock fs-1"></i>
+                    <div class="position-absolute top-0 end-0 mt-2 me-2 opacity-75">
+                        <i class="bi bi-shield-lock fs-2"></i>
                     </div>
-                    <h5 class="text-white text-uppercase mb-1 fw-light">Total CVEs</h5>
-                    <h2 class="text-white display-4 fw-bold mb-2 stat-number">{{ total_cve_count }}</h2>
-                    <div class="text-white opacity-75 mt-auto">
+                    <h5 class="text-white text-uppercase mb-1 fw-light fs-6">Total CVEs</h5>
+                    <h2 class="text-white display-5 fw-bold mb-2 stat-number">{{ total_cve_count }}</h2>
+                    <div class="text-white opacity-75 mt-auto small">
                         <i class="bi bi-database me-1"></i> In database
                     </div>
                 </div>
@@ -34,14 +34,14 @@
         
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 border-0">
-                <div class="card-body position-relative p-4 d-flex flex-column"
+                <div class="card-body position-relative p-3 d-flex flex-column"
                      style="background: linear-gradient(135deg, var(--danger-color) 0%, #ff6050 100%); border-radius: var(--border-radius);">
-                    <div class="position-absolute top-0 end-0 mt-3 me-3 opacity-75">
-                        <i class="bi bi-exclamation-triangle fs-1"></i>
+                    <div class="position-absolute top-0 end-0 mt-2 me-2 opacity-75">
+                        <i class="bi bi-exclamation-triangle fs-2"></i>
                     </div>
-                    <h5 class="text-white text-uppercase mb-1 fw-light">Critical</h5>
-                    <h2 class="text-white display-4 fw-bold mb-2 stat-number">{{ severity_counts.get('CRITICAL', 0) }}</h2>
-                    <div class="text-white opacity-75 mt-auto">
+                    <h5 class="text-white text-uppercase mb-1 fw-light fs-6">Critical</h5>
+                    <h2 class="text-white display-5 fw-bold mb-2 stat-number">{{ severity_counts.get('CRITICAL', 0) }}</h2>
+                    <div class="text-white opacity-75 mt-auto small">
                         <i class="bi bi-arrow-up me-1"></i>{{ (severity_counts.get('CRITICAL', 0) / total_cve_count * 100)|round(1) }}% of all CVEs
                     </div>
                 </div>
@@ -50,14 +50,14 @@
         
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 border-0">
-                <div class="card-body position-relative p-4 d-flex flex-column"
+                <div class="card-body position-relative p-3 d-flex flex-column"
                      style="background: linear-gradient(135deg, #ff6d41 0%, #ffaa50 100%); border-radius: var(--border-radius);">
-                    <div class="position-absolute top-0 end-0 mt-3 me-3 opacity-75">
-                        <i class="bi bi-exclamation-circle fs-1"></i>
+                    <div class="position-absolute top-0 end-0 mt-2 me-2 opacity-75">
+                        <i class="bi bi-exclamation-circle fs-2"></i>
                     </div>
-                    <h5 class="text-white text-uppercase mb-1 fw-light">High</h5>
-                    <h2 class="text-white display-4 fw-bold mb-2 stat-number">{{ severity_counts.get('HIGH', 0) }}</h2>
-                    <div class="text-white opacity-75 mt-auto">
+                    <h5 class="text-white text-uppercase mb-1 fw-light fs-6">High</h5>
+                    <h2 class="text-white display-5 fw-bold mb-2 stat-number">{{ severity_counts.get('HIGH', 0) }}</h2>
+                    <div class="text-white opacity-75 mt-auto small">
                         <i class="bi bi-graph-up me-1"></i>{{ (severity_counts.get('HIGH', 0) / total_cve_count * 100)|round(1) }}% of all CVEs
                     </div>
                 </div>
@@ -66,14 +66,14 @@
         
         <div class="col-xl-3 col-md-6">
             <div class="card h-100 border-0">
-                <div class="card-body position-relative p-4 d-flex flex-column"
+                <div class="card-body position-relative p-3 d-flex flex-column"
                      style="background: linear-gradient(135deg, var(--secondary-color) 0%, #4acea8 100%); border-radius: var(--border-radius);">
-                    <div class="position-absolute top-0 end-0 mt-3 me-3 opacity-75">
-                        <i class="bi bi-info-circle fs-1"></i>
+                    <div class="position-absolute top-0 end-0 mt-2 me-2 opacity-75">
+                        <i class="bi bi-info-circle fs-2"></i>
                     </div>
-                    <h5 class="text-white text-uppercase mb-1 fw-light">Medium & Low</h5>
-                    <h2 class="text-white display-4 fw-bold mb-2 stat-number">{{ (severity_counts.get('MEDIUM', 0) + severity_counts.get('LOW', 0)) }}</h2>
-                    <div class="text-white opacity-75 mt-auto">
+                    <h5 class="text-white text-uppercase mb-1 fw-light fs-6">Medium & Low</h5>
+                    <h2 class="text-white display-5 fw-bold mb-2 stat-number">{{ (severity_counts.get('MEDIUM', 0) + severity_counts.get('LOW', 0)) }}</h2>
+                    <div class="text-white opacity-75 mt-auto small">
                         <i class="bi bi-shield-check me-1"></i>{{ ((severity_counts.get('MEDIUM', 0) + severity_counts.get('LOW', 0)) / total_cve_count * 100)|round(1) }}% of all CVEs
                     </div>
                 </div>
@@ -82,25 +82,25 @@
     </div>
     
     <!-- Quick Access Section -->
-    <h4 class="mb-3 d-flex align-items-center">
+    <h4 class="mb-2 d-flex align-items-center fs-5">
         <i class="bi bi-lightning-charge-fill me-2"></i> Quick Access
     </h4>
     
-    <div class="row g-4 mb-5">
+    <div class="row g-3 mb-4">
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex mb-3">
-                        <div class="d-flex align-items-center justify-content-center rounded-circle p-3 me-3"
-                             style="width: 64px; height: 64px; background-color: rgba(26, 115, 232, 0.1); color: var(--primary-color);">
-                            <i class="bi bi-calendar3-week fs-3"></i>
+                <div class="card-body p-3">
+                    <div class="d-flex mb-2">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle p-2 me-2"
+                             style="width: 52px; height: 52px; background-color: rgba(26, 115, 232, 0.1); color: var(--primary-color);">
+                            <i class="bi bi-calendar3-week fs-4"></i>
                         </div>
                         <div>
-                            <h5 class="fw-bold mb-1">Monthly Summary</h5>
+                            <h5 class="fw-bold mb-0 fs-6">Monthly Summary</h5>
                             <p class="text-muted mb-0 small">CVE publication trends</p>
                         </div>
                     </div>
-                    <p class="card-text">View detailed monthly trends of vulnerability publications and analyze patterns over time.</p>
+                    <p class="card-text small mb-2">View detailed monthly trends of vulnerability publications and analyze patterns over time.</p>
                     <a href="{{ url_for('monthly_summary') }}" class="btn btn-sm btn-outline-primary w-100">
                         <i class="bi bi-graph-up me-1"></i> View Report
                     </a>
@@ -110,18 +110,18 @@
         
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex mb-3">
-                        <div class="d-flex align-items-center justify-content-center rounded-circle p-3 me-3"
-                             style="width: 64px; height: 64px; background-color: rgba(234, 67, 53, 0.1); color: var(--danger-color);">
-                            <i class="bi bi-pie-chart fs-3"></i>
+                <div class="card-body p-3">
+                    <div class="d-flex mb-2">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle p-2 me-2"
+                             style="width: 52px; height: 52px; background-color: rgba(234, 67, 53, 0.1); color: var(--danger-color);">
+                            <i class="bi bi-pie-chart fs-4"></i>
                         </div>
                         <div>
-                            <h5 class="fw-bold mb-1">Severity Distribution</h5>
+                            <h5 class="fw-bold mb-0 fs-6">Severity Distribution</h5>
                             <p class="text-muted mb-0 small">Vulnerability impact analysis</p>
                         </div>
                     </div>
-                    <p class="card-text">Analyze the distribution of vulnerabilities by severity levels and CVSS scores.</p>
+                    <p class="card-text small mb-2">Analyze the distribution of vulnerabilities by severity levels and CVSS scores.</p>
                     <a href="{{ url_for('severity_distribution') }}" class="btn btn-sm btn-outline-danger w-100">
                         <i class="bi bi-bar-chart me-1"></i> View Report
                     </a>
@@ -131,18 +131,18 @@
         
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex mb-3">
-                        <div class="d-flex align-items-center justify-content-center rounded-circle p-3 me-3"
-                             style="width: 64px; height: 64px; background-color: rgba(251, 188, 4, 0.1); color: var(--warning-color);">
-                            <i class="bi bi-building fs-3"></i>
+                <div class="card-body p-3">
+                    <div class="d-flex mb-2">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle p-2 me-2"
+                             style="width: 52px; height: 52px; background-color: rgba(251, 188, 4, 0.1); color: var(--warning-color);">
+                            <i class="bi bi-building fs-4"></i>
                         </div>
                         <div>
-                            <h5 class="fw-bold mb-1">Vendor Analysis</h5>
+                            <h5 class="fw-bold mb-0 fs-6">Vendor Analysis</h5>
                             <p class="text-muted mb-0 small">Vendor security assessment</p>
                         </div>
                     </div>
-                    <p class="card-text">Identify the most vulnerable software vendors and analyze their security posture.</p>
+                    <p class="card-text small mb-2">Identify the most vulnerable software vendors and analyze their security posture.</p>
                     <a href="{{ url_for('vendor_analysis') }}" class="btn btn-sm btn-outline-warning w-100">
                         <i class="bi bi-diagram-3 me-1"></i> View Report
                     </a>
@@ -152,32 +152,32 @@
     </div>
 
     <!-- Advanced Search Section -->
-    <div class="card mb-5">
-        <div class="card-header d-flex align-items-center">
-            <i class="bi bi-search me-2 fs-4" style="color: var(--primary-color);"></i>
-            <h4 class="m-0">Advanced Search</h4>
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center py-2">
+            <i class="bi bi-search me-2 fs-5" style="color: var(--primary-color);"></i>
+            <h4 class="m-0 fs-5">Advanced Search</h4>
         </div>
-        <div class="card-body p-4">
-            <form method="POST" action="{{ url_for('index') }}" class="row g-3">
+        <div class="card-body p-3">
+            <form method="POST" action="{{ url_for('index') }}" class="row g-2">
                 <div class="col-md-6">
-                    <label for="search_term" class="form-label fw-medium">Search Term</label>
+                    <label for="search_term" class="form-label fw-medium small">Search Term</label>
                     <div class="search-wrapper">
                         <i class="bi bi-keyboard search-icon"></i>
-                        <input type="text" class="form-control form-control-lg shadow-sm" 
+                        <input type="text" class="form-control shadow-sm" 
                                id="search_term" name="search_term" 
                                placeholder="CVE ID, keyword, or vendor name" 
                                value="{{ search_term }}"
                                autocomplete="off">
                     </div>
-                    <div class="form-text">
+                    <div class="form-text small">
                         <i class="bi bi-info-circle me-1"></i>
                         Enter a CVE ID (e.g., CVE-2021-44228) or keywords
                     </div>
                 </div>
                 
                 <div class="col-md-3">
-                    <label for="severity" class="form-label fw-medium">Severity Filter</label>
-                    <select class="form-select form-select-lg shadow-sm" id="severity" name="severity">
+                    <label for="severity" class="form-label fw-medium small">Severity Filter</label>
+                    <select class="form-select shadow-sm" id="severity" name="severity">
                         <option value="" {% if not severity %}selected{% endif %}>Any severity</option>
                         <option value="CRITICAL" {% if severity == "CRITICAL" %}selected{% endif %}>Critical only</option>
                         <option value="HIGH" {% if severity == "HIGH" %}selected{% endif %}>High only</option>
@@ -187,25 +187,25 @@
                 </div>
                 
                 <div class="col-md-3">
-                    <label class="form-label fw-medium">Search Options</label>
-                    <div class="card border-0 bg-light p-3">
+                    <label class="form-label fw-medium small">Search Options</label>
+                    <div class="card border-0 bg-light p-2">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" role="switch" 
                                    id="exploitable" name="exploitable"
                                    {% if request.args.get('exploitable') == 'true' %}checked{% endif %}>
-                            <label class="form-check-label" for="exploitable">
+                            <label class="form-check-label small" for="exploitable">
                                 <i class="bi bi-bug me-1 text-danger"></i>Show potentially exploitable
                             </label>
-                            <small class="form-text d-block mt-1">Filter for CVEs with known exploitation references</small>
+                            <small class="form-text d-block mt-1 small">Filter for CVEs with known exploitation references</small>
                         </div>
                     </div>
                 </div>
                 
-                <div class="col-12 d-flex justify-content-end gap-2 mt-4">
-                    <button type="reset" class="btn btn-light">
+                <div class="col-12 d-flex justify-content-end gap-2 mt-3">
+                    <button type="reset" class="btn btn-light btn-sm">
                         <i class="bi bi-x-circle me-1"></i>Reset
                     </button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary btn-sm">
                         <i class="bi bi-search me-1"></i>Search Database
                     </button>
                 </div>
@@ -215,11 +215,11 @@
 
     <!-- Results Section -->
     {% if search_performed %}
-    <div class="card mb-5">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div class="card mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
             <div class="d-flex align-items-center">
-                <i class="bi bi-list-check me-2 fs-4" style="color: var(--primary-color);"></i>
-                <h4 class="m-0">Search Results</h4>
+                <i class="bi bi-list-check me-2 fs-5" style="color: var(--primary-color);"></i>
+                <h4 class="m-0 fs-5">Search Results</h4>
             </div>
             {% if results %}
             <span class="badge bg-primary rounded-pill p-2 px-3">
@@ -231,10 +231,10 @@
         <div class="card-body p-0">
             {% if results %}
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 compact-table">
                     <thead>
                         <tr>
-                            <th class="px-4">CVE ID</th>
+                            <th class="px-3">CVE ID</th>
                             <th>Severity</th>
                             <th>Description</th>
                             <th>Published</th>
@@ -244,7 +244,7 @@
                     <tbody>
                         {% for cve in results %}
                         <tr>
-                            <td class="px-4">
+                            <td class="px-3">
                                 <a href="{{ url_for('cve_details', cve_id=cve.cve_id) }}" 
                                    class="text-decoration-none fw-medium"
                                    style="color: var(--primary-color);">
@@ -275,7 +275,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <div class="text-truncate" style="max-width: 500px;" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ cve.description }}">
+                                <div class="text-truncate compact-text" style="max-width: 500px;" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ cve.description }}">
                                     {{ cve.description[:150] }}{% if cve.description|length > 150 %}...{% endif %}
                                 </div>
                             </td>
@@ -304,15 +304,15 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert m-4 border-0" style="background-color: rgba(26, 115, 232, 0.1);">
+            <div class="alert m-3 border-0" style="background-color: rgba(26, 115, 232, 0.1);">
                 <div class="d-flex">
-                    <div class="me-3">
-                        <i class="bi bi-info-circle-fill fs-3" style="color: var(--primary-color);"></i>
+                    <div class="me-2">
+                        <i class="bi bi-info-circle-fill fs-4" style="color: var(--primary-color);"></i>
                     </div>
                     <div>
-                        <h5 class="alert-heading">No results found</h5>
-                        <p class="mb-0">No vulnerability entries were found matching "<strong>{{ search_term }}</strong>".</p>
-                        <p class="mb-0 mt-2">Try adjusting your search terms or removing filters.</p>
+                        <h5 class="alert-heading fs-6 fw-bold mb-1">No results found</h5>
+                        <p class="mb-0 small">No vulnerability entries were found matching "<strong>{{ search_term }}</strong>".</p>
+                        <p class="mb-0 mt-1 small">Try adjusting your search terms or removing filters.</p>
                     </div>
                 </div>
             </div>
@@ -320,7 +320,7 @@
             
             {% if total_pages and total_pages > 1 %}
             <!-- Pagination with better styling -->
-            <div class="pagination-container p-3 border-top">
+            <div class="pagination-container p-2 border-top">
                 <ul class="pagination pagination-sm justify-content-center m-0">
                     <!-- Previous page -->
                     <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
@@ -374,25 +374,25 @@
     {% endif %}
 
     <!-- Database Actions -->
-    <h4 class="mb-3 d-flex align-items-center">
+    <h4 class="mb-2 d-flex align-items-center fs-5">
         <i class="bi bi-gear-fill me-2"></i> Database Management
     </h4>
     
-    <div class="row g-4 mb-5">
+    <div class="row g-3 mb-4">
         <div class="col-md-6">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body p-4">
+                <div class="card-body p-3">
                     <div class="d-flex">
-                        <div class="flex-shrink-0 me-3">
+                        <div class="flex-shrink-0 me-2">
                             <div class="d-flex align-items-center justify-content-center rounded-circle"
-                                 style="width: 60px; height: 60px; background-color: rgba(26, 115, 232, 0.1);">
-                                <i class="bi bi-arrow-repeat fs-2" style="color: var(--primary-color);"></i>
+                                 style="width: 50px; height: 50px; background-color: rgba(26, 115, 232, 0.1);">
+                                <i class="bi bi-arrow-repeat fs-3" style="color: var(--primary-color);"></i>
                             </div>
                         </div>
                         <div>
-                            <h5 class="card-title fw-bold">Update Database</h5>
-                            <p class="card-text text-muted">Fetch the latest CVE entries from the National Vulnerability Database and update your local instance.</p>
-                            <a href="{{ url_for('update_database') }}" class="btn btn-primary mt-2">
+                            <h5 class="card-title fw-bold fs-6 mb-1">Update Database</h5>
+                            <p class="card-text text-muted small mb-2">Fetch the latest CVE entries from the National Vulnerability Database and update your local instance.</p>
+                            <a href="{{ url_for('update_database') }}" class="btn btn-primary btn-sm mt-1">
                                 <i class="bi bi-arrow-clockwise me-1"></i> Update Now
                             </a>
                         </div>
@@ -403,18 +403,18 @@
         
         <div class="col-md-6">
             <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body p-4">
+                <div class="card-body p-3">
                     <div class="d-flex">
-                        <div class="flex-shrink-0 me-3">
+                        <div class="flex-shrink-0 me-2">
                             <div class="d-flex align-items-center justify-content-center rounded-circle"
-                                 style="width: 60px; height: 60px; background-color: rgba(52, 168, 83, 0.1);">
-                                <i class="bi bi-list-ul fs-2" style="color: var(--secondary-color);"></i>
+                                 style="width: 50px; height: 50px; background-color: rgba(52, 168, 83, 0.1);">
+                                <i class="bi bi-list-ul fs-3" style="color: var(--secondary-color);"></i>
                             </div>
                         </div>
                         <div>
-                            <h5 class="card-title fw-bold">View All CVEs</h5>
-                            <p class="card-text text-muted">Browse through all CVE entries currently stored in the database with sorting and filtering options.</p>
-                            <a href="{{ url_for('view_all_entries') }}" class="btn btn-success mt-2" style="background-color: var(--secondary-color); border-color: var(--secondary-color);">
+                            <h5 class="card-title fw-bold fs-6 mb-1">View All CVEs</h5>
+                            <p class="card-text text-muted small mb-2">Browse through all CVE entries currently stored in the database with sorting and filtering options.</p>
+                            <a href="{{ url_for('view_all_entries') }}" class="btn btn-success btn-sm mt-1" style="background-color: var(--secondary-color); border-color: var(--secondary-color);">
                                 <i class="bi bi-eye me-1"></i> View All Entries
                             </a>
                         </div>
@@ -429,6 +429,14 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                boundary: document.body
+            });
+        });
+        
         // Helper function to format numbers with commas
         function numberWithCommas(x) {
             return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -440,9 +448,9 @@
         });
         
         // Animate counting for stat numbers
-        document.querySelectorAll('.display-4').forEach(function(element) {
+        document.querySelectorAll('.display-5').forEach(function(element) {
             const finalValue = parseInt(element.textContent.replace(/,/g, ''));
-            const duration = 1500;
+            const duration = 1200; // Reduced animation time
             let startTimestamp = null;
             
             function step(timestamp) {
@@ -465,13 +473,13 @@
         const animateElements = document.querySelectorAll('.card');
         animateElements.forEach((el, index) => {
             el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            el.style.transform = 'translateY(15px)'; // Less movement
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
             
             setTimeout(() => {
                 el.style.opacity = '1';
                 el.style.transform = 'translateY(0)';
-            }, 100 + (index * 120)); // Stagger the animations
+            }, 50 + (index * 80)); // Faster staggered animations
         });
     });
 </script>
