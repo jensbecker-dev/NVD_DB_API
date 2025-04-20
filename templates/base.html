@@ -472,7 +472,7 @@
             <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'index' %}active{% endif %}">
                 <i class="bi bi-speedometer2 me-2"></i>Dashboard
             </a>
-            <a href="{{ url_for('view_all_entries') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'view_all_entries' %}active{% endif %}">
+            <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'index' %}active{% endif %}">
                 <i class="bi bi-list-ul me-2"></i>All CVEs
             </a>
         </div>
@@ -716,3 +716,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+``` 

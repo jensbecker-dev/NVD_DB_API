@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Database Update | NVD CVE Database{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="mb-3">CVE Database Update</h1>
+            <p class="lead">
+                Manage updates to the CVE vulnerability database
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Current Database Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-muted">Total CVEs in database</h6>
+                        <p class="h3">{{ total_cve_count | default(0) | number_format }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Last update status</h6>
+                        {% if status.error %}
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ status.error }}
+                            </div>
+                        {% elif enhanced_status.error %}
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ enhanced_status.error }}
+                            </div>
+                        {% elif enhanced_status.cves_added > 0 %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle me-2"></i>Last update added {{ enhanced_status.cves_added }} new CVEs
+                            </div>
+                        {% elif status.cves_added > 0 %}
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle me-2"></i>Last update added {{ status.cves_added }} new CVEs
+                            </div>
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-info-circle me-2"></i>No recent updates
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Update Controls</h5>
+                </div>
+                <div class="card-body">
+                    {% if status.is_updating or enhanced_status.is_updating %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-arrow-repeat me-2"></i>Database update in progress...
+                        </div>
+                        
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 style="width: {{ enhanced_status.progress if enhanced_status.is_updating else status.progress }}%">
+                                {{ enhanced_status.progress if enhanced_status.is_updating else status.progress }}%
+                            </div>
+                        </div>
+                        
+                        {% if enhanced_status.is_updating and enhanced_status.current_source %}
+                            <p class="text-muted">
+                                <small>
+                                    Currently processing: {{ enhanced_status.current_source }}
+                                </small>
+                            </p>
+                        {% endif %}
+                        
+                        <p class="text-center">
+                            <button class="btn btn-secondary" disabled>Update in progress...</button>
+                        </p>
+                    {% else %}
+                        <p>
+                            Click the button below to fetch the latest CVE data from the National Vulnerability Database and other sources.
+                        </p>
+                        <p class="text-muted">
+                            <small>This process may take several minutes depending on your internet connection and the amount of new data.</small>
+                        </p>
+                        <form method="post" class="text-center">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-cloud-download me-2"></i>Update CVE Database
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if status.is_updating or enhanced_status.is_updating %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Update Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div id="updateStatus">
+                        <p class="text-center">
+                            <i class="bi bi-arrow-repeat fa-spin me-2"></i>
+                            Checking update status...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if status.is_updating or enhanced_status.is_updating %}
+<script>
+    // Function to refresh the page periodically to show update progress
+    function checkUpdateStatus() {
+        // Refresh the page every 5 seconds
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000);
+    }
+    
+    // Start checking the update status
+    document.addEventListener('DOMContentLoaded', function() {
+        checkUpdateStatus();
+    });
+</script>
+{% endif %}
+{% endblock %}

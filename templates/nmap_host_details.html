@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Host Details | NVD CVE Database API{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('nmap_scanner') }}">Nmap Scanner</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('nmap_scan_details', scan_id=scan_id) }}">Scan #{{ scan_id }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Host Details</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Host Details: {{ host.ip_address }}</h1>
+        <a href="{{ url_for('nmap_scan_details', scan_id=scan_id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Zurück zum Scan
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-server"></i> Host-Informationen
+                </div>
+                <div class="card-body">
+                    <dl>
+                        <dt>IP-Adresse</dt>
+                        <dd>{{ host.ip_address }}</dd>
+                        
+                        <dt>Hostname</dt>
+                        <dd>{{ host.hostname or 'Nicht verfügbar' }}</dd>
+                        
+                        <dt>Betriebssystem</dt>
+                        <dd>{{ host.os_name or 'Unbekannt' }}</dd>
+                        
+                        <dt>Scan-Zeit</dt>
+                        <dd>{{ scan_time.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
+                        
+                        <dt>Offene Ports</dt>
+                        <dd>{{ host.ports|length }}</dd>
+                        
+                        <dt>Schwachstellen</dt>
+                        <dd>{{ host.vulnerability_count }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-network-wired"></i> Offene Ports und Dienste
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Port</th>
+                                    <th>Protokoll</th>
+                                    <th>Dienst</th>
+                                    <th>Version</th>
+                                    <th>Schwachstellen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for port in host.ports %}
+                                <tr>
+                                    <td><strong>{{ port.port_id }}</strong></td>
+                                    <td>{{ port.protocol }}</td>
+                                    <td>{{ port.service_name }}</td>
+                                    <td>{{ port.service_product }} {{ port.service_version }}</td>
+                                    <td>
+                                        {% if port.vulnerabilities|length > 0 %}
+                                        <span class="badge bg-danger">{{ port.vulnerabilities|length }}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">0</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if host.vulnerability_count > 0 %}
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-exclamation-triangle"></i> Gefundene Schwachstellen
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>CVE-ID</th>
+                            <th>Port</th>
+                            <th>Dienst</th>
+                            <th>CVSS</th>
+                            <th>Schweregrad</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for port in host.ports %}
+                            {% for vuln in port.vulnerabilities %}
+                            <tr>
+                                <td><a href="{{ url_for('cve_details', cve_id=vuln.cve_id) }}" target="_blank">{{ vuln.cve_id }}</a></td>
+                                <td>{{ port.port_id }}/{{ port.protocol }}</td>
+                                <td>{{ port.service_name }} {{ port.service_product }} {{ port.service_version }}</td>
+                                <td>
+                                    {% if vuln.cvss_score %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ vuln.cvss_score*10 }}%; background-color: {{ get_cvss_color(vuln.cvss_score) }};" 
+                                             aria-valuenow="{{ vuln.cvss_score }}" aria-valuemin="0" aria-valuemax="10">
+                                            {{ vuln.cvss_score }}
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if vuln.severity == 'CRITICAL' %}
+                                    <span class="badge bg-danger">Kritisch</span>
+                                    {% elif vuln.severity == 'HIGH' %}
+                                    <span class="badge bg-warning text-dark">Hoch</span>
+                                    {% elif vuln.severity == 'MEDIUM' %}
+                                    <span class="badge bg-info">Mittel</span>
+                                    {% elif vuln.severity == 'LOW' %}
+                                    <span class="badge bg-success">Niedrig</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Unbekannt</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('nmap_cve_instances', cve_id=vuln.cve_id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-search"></i> Alle betroffenen Systeme
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <i class="fas fa-shield-alt"></i> Empfehlungen
+        </div>
+        <div class="card-body">
+            <h5>Verbesserung der Sicherheit</h5>
+            <ul>
+                {% if host.vulnerability_count > 0 %}
+                <li>Aktualisieren Sie die Software auf diesem System, insbesondere die Dienste mit kritischen oder hohen Schwachstellen.</li>
+                <li>Erwägen Sie die Verwendung von Firewalls oder Zugriffskontrolllisten (ACLs), um den Zugriff auf offene Ports zu beschränken.</li>
+                <li>Deaktivieren Sie nicht benötigte Dienste.</li>
+                {% else %}
+                <li>Das System weist derzeit keine bekannten Schwachstellen auf, es sollte jedoch regelmäßig überprüft werden.</li>
+                <li>Erwägen Sie die Implementierung von Netzwerksegmentierung und Zugriffskontrolllisten.</li>
+                {% endif %}
+                <li>Führen Sie regelmäßige Sicherheitsscans durch, um neue Schwachstellen zu erkennen.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

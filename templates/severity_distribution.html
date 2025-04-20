@@ -1,310 +1,99 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}CVE Severity Distribution{% endblock %}
-
-{% block extra_css %}
-<style>
-    .chart-container {
-        position: relative;
-        height: 400px;
-        margin-bottom: 1rem;
-    }
-
-    .severity-card {
-        border: none;
-        border-radius: 0.8rem;
-        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        margin-bottom: 1.5rem;
-        overflow: hidden;
-    }
-
-    .severity-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-    }
-
-    .severity-card .card-body {
-        padding: 1.5rem;
-    }
-
-    .severity-card .percentage {
-        font-size: 2.5rem;
-        font-weight: bold;
-        line-height: 1.2;
-    }
-
-    .severity-card .card-text {
-        font-size: 0.95rem;
-        opacity: 0.9;
-    }
-
-    /* Updated severity card color schemes with improved contrast */
-    .severity-critical {
-        background: linear-gradient(135deg, #dc3545, #9c1825);
-        color: white;
-    }
-
-    .severity-high {
-        background: linear-gradient(135deg, #fd7e14, #b35900);
-        color: white;
-    }
-
-    .severity-medium {
-        background: linear-gradient(135deg, #ffc107, #d69e00);
-        color: #212529; /* Darker text for better contrast */
-        text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.3); /* Add subtle text shadow for readability */
-    }
-
-    .severity-low {
-        background: linear-gradient(135deg, #0dcaf0, #0590ae);
-        color: #212529; /* Darker text for better contrast */
-        text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.3); /* Add subtle text shadow for readability */
-    }
-
-    .severity-unknown {
-        background: linear-gradient(135deg, #6c757d, #343a40);
-        color: white;
-    }
-
-    /* Card title styling for better visibility */
-    .severity-card .card-title {
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.5rem;
-    }
-
-    .severity-stats {
-        font-size: 1rem;
-    }
-
-    .severity-stats strong {
-        font-weight: 600;
-    }
-
-    /* Updated legend styles */
-    .custom-legend {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        padding: 0.5rem 0;
-        margin-bottom: 0;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        margin: 5px 15px;
-        font-weight: 500;
-    }
-
-    .legend-color {
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-        margin-right: 8px;
-        border: 1px solid rgba(0,0,0,0.1);
-    }
-
-    .card {
-        border: none;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-        font-weight: 500;
-        padding: 1rem 1.25rem;
-    }
-
-    .card-title {
-        color: #343a40;
-        margin-bottom: 0;
-    }
-
-    h1 {
-        color: #343a40;
-        font-weight: 600;
-    }
-
-    .breadcrumb {
-        background-color: transparent;
-        padding-left: 0;
-    }
-
-    /* Improved summary statistics styling */
-    .severity-stats .d-flex {
-        padding: 0.5rem 0;
-    }
-
-    .severity-stats .border-bottom {
-        border-bottom-color: rgba(0,0,0,0.1) !important;
-    }
-
-    /* Improved chart labels */
-    canvas {
-        filter: drop-shadow(0px 2px 5px rgba(0,0,0,0.05));
-    }
-</style>
-{% endblock %}
+{% block title %}Severity Distribution - NVD Database{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Severity Distribution</li>
-        </ol>
-    </nav>
+    <h1>CVE Severity Distribution</h1>
+    <p class="lead">Analysis of vulnerability severity levels across the database</p>
 
-    <h1 class="mb-4">CVE Severity Distribution</h1>
-
-    <!-- Severity Distribution Summary -->
-    <div class="row mb-4 g-4">
-        <div class="col-lg-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Overall Severity Distribution</h5>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <div class="chart-container flex-grow-1">
-                        <canvas id="severityPieChart"></canvas>
-                    </div>
-                    <div class="custom-legend mt-3">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #dc3545;"></div>
-                            <span>Critical</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #fd7e14;"></div>
-                            <span>High</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #ffc107;"></div>
-                            <span>Medium</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #0dcaf0;"></div>
-                            <span>Low</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background-color: #6c757d;"></div>
-                            <span>Unknown</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Summary Statistics</h5>
+    <div class="row mb-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Overall Severity Distribution</h5>
                 </div>
                 <div class="card-body">
-                    <div class="severity-stats">
-                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                            <div>Total CVEs:</div>
-                            <div><strong>{{ total_cves }}</strong></div>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <div><span class="legend-color me-2" style="background-color: #dc3545;"></span>Critical:</div>
-                            <div><strong>{{ severity_counts.CRITICAL }}</strong> ({{ severity_percents.CRITICAL }}%)</div>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <div><span class="legend-color me-2" style="background-color: #fd7e14;"></span>High:</div>
-                            <div><strong>{{ severity_counts.HIGH }}</strong> ({{ severity_percents.HIGH }}%)</div>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <div><span class="legend-color me-2" style="background-color: #ffc107;"></span>Medium:</div>
-                            <div><strong>{{ severity_counts.MEDIUM }}</strong> ({{ severity_percents.MEDIUM }}%)</div>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <div><span class="legend-color me-2" style="background-color: #0dcaf0;"></span>Low:</div>
-                            <div><strong>{{ severity_counts.LOW }}</strong> ({{ severity_percents.LOW }}%)</div>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <div><span class="legend-color me-2" style="background-color: #6c757d;"></span>Unknown:</div>
-                            <div><strong>{{ severity_counts.UNKNOWN }}</strong> ({{ severity_percents.UNKNOWN }}%)</div>
-                        </div>
+                    <canvas id="severityPieChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Total CVEs by Severity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Severity</th>
+                                    <th>Count</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-danger">CRITICAL</span></td>
+                                    <td>{{ severity_counts.CRITICAL }}</td>
+                                    <td>{{ severity_percents.CRITICAL }}%</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-warning text-dark">HIGH</span></td>
+                                    <td>{{ severity_counts.HIGH }}</td>
+                                    <td>{{ severity_percents.HIGH }}%</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info text-dark">MEDIUM</span></td>
+                                    <td>{{ severity_counts.MEDIUM }}</td>
+                                    <td>{{ severity_percents.MEDIUM }}%</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-success">LOW</span></td>
+                                    <td>{{ severity_counts.LOW }}</td>
+                                    <td>{{ severity_percents.LOW }}%</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-secondary">UNKNOWN</span></td>
+                                    <td>{{ severity_counts.UNKNOWN }}</td>
+                                    <td>{{ severity_percents.UNKNOWN }}%</td>
+                                </tr>
+                                <tr class="table-dark">
+                                    <td><strong>TOTAL</strong></td>
+                                    <td><strong>{{ total_cves }}</strong></td>
+                                    <td><strong>100%</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Severity Cards -->
-    <h2 class="mb-3 h4">Severity Breakdown</h2>
-    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-4 mb-4">
-        <div class="col">
-            <div class="card severity-card severity-critical h-100">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h3 class="card-title h5">Critical</h3>
-                    <div class="percentage mb-2">{{ severity_percents.CRITICAL }}%</div>
-                    <p class="card-text mb-0">{{ severity_counts.CRITICAL }} vulnerabilities</p>
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Severity Trends Over Time</h5>
                 </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card severity-card severity-high h-100">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h3 class="card-title h5">High</h3>
-                    <div class="percentage mb-2">{{ severity_percents.HIGH }}%</div>
-                    <p class="card-text mb-0">{{ severity_counts.HIGH }} vulnerabilities</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card severity-card severity-medium h-100">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h3 class="card-title h5">Medium</h3>
-                    <div class="percentage mb-2">{{ severity_percents.MEDIUM }}%</div>
-                    <p class="card-text mb-0">{{ severity_counts.MEDIUM }} vulnerabilities</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card severity-card severity-low h-100">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h3 class="card-title h5">Low</h3>
-                    <div class="percentage mb-2">{{ severity_percents.LOW }}%</div>
-                    <p class="card-text mb-0">{{ severity_counts.LOW }} vulnerabilities</p>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card severity-card severity-unknown h-100">
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <h3 class="card-title h5">Unknown</h3>
-                    <div class="percentage mb-2">{{ severity_percents.UNKNOWN }}%</div>
-                    <p class="card-text mb-0">{{ severity_counts.UNKNOWN }} vulnerabilities</p>
+                <div class="card-body">
+                    <canvas id="severityTrendsChart" height="300"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Severity Trend Over Time -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">Severity Trends Over Time</h5>
-        </div>
-        <div class="card-body">
-            <div class="chart-container">
-                <canvas id="severityTrendChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- CVSS Score Distribution -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">CVSS Score Distribution</h5>
-        </div>
-        <div class="card-body">
-            <div class="chart-container">
-                <canvas id="cvssDistributionChart"></canvas>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">CVSS Score Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="cvssDistributionChart" height="300"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -314,238 +103,112 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Updated color scheme for better contrast
-    const colors = {
-        critical: '#dc3545',
-        high: '#fd7e14',
-        medium: '#ffc107',
-        low: '#0dcaf0',
-        unknown: '#6c757d',
-        criticalLight: 'rgba(220, 53, 69, 0.7)',
-        highLight: 'rgba(253, 126, 20, 0.7)',
-        mediumLight: 'rgba(255, 193, 7, 0.7)',
-        lowLight: 'rgba(13, 202, 240, 0.7)',
-        unknownLight: 'rgba(108, 117, 125, 0.7)',
-        criticalDark: '#9c1825',
-        highDark: '#b35900',
-        mediumDark: '#d69e00',
-        lowDark: '#0590ae',
-        unknownDark: '#343a40',
-        cvssBlue: 'rgba(54, 162, 235, 0.6)',
-        cvssBlueBorder: 'rgba(54, 162, 235, 1)'
-    };
-
-    const pieCtx = document.getElementById('severityPieChart').getContext('2d');
-    new Chart(pieCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Critical', 'High', 'Medium', 'Low', 'Unknown'],
-            datasets: [{
-                data: [
-                    {{ severity_counts.CRITICAL }},
-                    {{ severity_counts.HIGH }},
-                    {{ severity_counts.MEDIUM }},
-                    {{ severity_counts.LOW }},
-                    {{ severity_counts.UNKNOWN }}
-                ],
-                backgroundColor: [
-                    colors.critical,
-                    colors.high,
-                    colors.medium,
-                    colors.low,
-                    colors.unknown
-                ],
-                borderColor: '#ffffff',
-                borderWidth: 2,
-                hoverBackgroundColor: [
-                    colors.criticalDark,
-                    colors.highDark,
-                    colors.mediumDark,
-                    colors.lowDark,
-                    colors.unknownDark
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '60%',
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    titleFont: {
-                        weight: 'bold'
+    document.addEventListener('DOMContentLoaded', function() {
+        // Severity pie chart
+        var pieChartCtx = document.getElementById('severityPieChart').getContext('2d');
+        new Chart(pieChartCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Critical', 'High', 'Medium', 'Low', 'Unknown'],
+                datasets: [{
+                    data: [
+                        {{ severity_counts.CRITICAL }},
+                        {{ severity_counts.HIGH }},
+                        {{ severity_counts.MEDIUM }},
+                        {{ severity_counts.LOW }},
+                        {{ severity_counts.UNKNOWN }}
+                    ],
+                    backgroundColor: [
+                        'rgba(220, 53, 69, 0.8)',   // Red - Critical
+                        'rgba(253, 126, 20, 0.8)',  // Orange - High
+                        'rgba(255, 193, 7, 0.8)',   // Yellow - Medium
+                        'rgba(25, 135, 84, 0.8)',   // Green - Low
+                        'rgba(108, 117, 125, 0.8)'  // Gray - Unknown
+                    ],
+                    borderColor: [
+                        'rgba(220, 53, 69, 1)',
+                        'rgba(253, 126, 20, 1)',
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(108, 117, 125, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
                     },
-                    bodyFont: {
-                        size: 14
-                    },
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) {
-                                label += ': ';
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.label || '';
+                                var value = context.raw || 0;
+                                var percentage = (value / {{ total_cves }} * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
                             }
-                            if (context.parsed !== null) {
-                                const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                                const value = context.parsed;
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                label += `${value} (${percentage}%)`;
-                            }
-                            return label;
                         }
                     }
                 }
             }
-        }
-    });
-
-    const trendCtx = document.getElementById('severityTrendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: {{ years|tojson }},
-            datasets: [
-                {
-                    label: 'Critical',
-                    data: {{ critical_series|tojson }},
-                    backgroundColor: colors.criticalLight,
-                    borderColor: colors.critical,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointBackgroundColor: colors.critical,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                },
-                {
-                    label: 'High',
-                    data: {{ high_series|tojson }},
-                    backgroundColor: colors.highLight,
-                    borderColor: colors.high,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointBackgroundColor: colors.high,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                },
-                {
-                    label: 'Medium',
-                    data: {{ medium_series|tojson }},
-                    backgroundColor: colors.mediumLight,
-                    borderColor: colors.medium,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointBackgroundColor: colors.medium,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                },
-                {
-                    label: 'Low',
-                    data: {{ low_series|tojson }},
-                    backgroundColor: colors.lowLight,
-                    borderColor: colors.low,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointBackgroundColor: colors.low,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                },
-                {
-                    label: 'Unknown',
-                    data: {{ unknown_series|tojson }},
-                    backgroundColor: colors.unknownLight,
-                    borderColor: colors.unknown,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    pointBackgroundColor: colors.unknown,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Number of CVEs'
+        });
+        
+        // Severity trends over time
+        var trendsChartCtx = document.getElementById('severityTrendsChart').getContext('2d');
+        var trendsChartData = {{ severity_trend_data|safe }};
+        
+        new Chart(trendsChartCtx, {
+            type: 'bar',
+            data: trendsChartData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Year'
+                        }
                     },
-                    grid: {
-                        color: '#e9ecef'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Year'
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of CVEs'
+                        }
                     }
                 }
             }
-        }
-    });
-
-    const cvssCtx = document.getElementById('cvssDistributionChart').getContext('2d');
-    new Chart(cvssCtx, {
-        type: 'bar',
-        data: {
-            labels: ['0-1', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9', '9-10'],
-            datasets: [{
-                label: 'Number of CVEs',
-                data: {{ cvss_ranges|tojson }},
-                backgroundColor: colors.cvssBlue,
-                borderColor: colors.cvssBlueBorder,
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Number of CVEs'
+        });
+        
+        // CVSS distribution chart
+        var cvssChartCtx = document.getElementById('cvssDistributionChart').getContext('2d');
+        var cvssChartData = {{ cvss_chart_data|safe }};
+        
+        new Chart(cvssChartCtx, {
+            type: 'bar',
+            data: cvssChartData,
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of CVEs'
+                        }
                     },
-                    grid: {
-                        color: '#e9ecef'
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'CVSS Score Range'
+                        }
                     }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'CVSS Score Range'
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
                 }
             }
-        }
+        });
     });
-});
 </script>
 {% endblock %}

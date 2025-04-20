@@ -93,5 +93,83 @@
             </a>
         </div>
     </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Severity Trends and CVSS Distribution</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="severityTrendsChart"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <canvas id="cvssDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Severity trends chart
+    var trendsChartCtx = document.getElementById('severityTrendsChart').getContext('2d');
+    var trendsChartData = {{ severity_trend_data|safe }};
+    
+    new Chart(trendsChartCtx, {
+        type: 'bar',
+        data: trendsChartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Year'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of CVEs'
+                    },
+                    stacked: true
+                }
+            }
+        }
+    });
+    
+    // CVSS distribution chart
+    var cvssChartCtx = document.getElementById('cvssDistributionChart').getContext('2d');
+    var cvssChartData = {{ cvss_chart_data|safe }};
+    
+    new Chart(cvssChartCtx, {
+        type: 'bar',
+        data: cvssChartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of CVEs'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'CVSS Score Range'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

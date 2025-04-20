@@ -41,7 +41,6 @@ def fetch_all_nvd_data():
     """
     all_cves = []
     current_year = datetime.now().year
-    # Add extra year for future CVEs (2025)
     start_year = 2002  # NVD CVE data starts from 2002
     
     try:
@@ -52,7 +51,7 @@ def fetch_all_nvd_data():
             logging.info(f"Added {len(recent_cves)} recent CVEs")
         
         # Then get historical data year by year
-        for year in range(start_year, current_year + 2):  # +2 to include current_year and future year
+        for year in range(start_year, current_year + 1):  # Only fetch up to current year
             logging.info(f"Fetching CVEs for year {year}")
             
             # Add a delay between requests to avoid rate limiting

@@ -6,11 +6,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import func, extract, case
 from flask import Flask, render_template, request, jsonify, redirect, url_for, json
 from modules.nvdapi import NVDApi, fetch_all_nvd_data, determine_severity
-from modules.db_update import enhanced_update_database_task, db_update_status as enhanced_status
 from datetime import datetime
 import threading
 import calendar
-import sqlite3
+from werkzeug.routing.exceptions import BuildError
 
 # Note: The 'RequestsDependencyWarning' suggests installing 'chardet' or 'charset_normalizer'
 # for optimal character encoding detection by the requests library (likely used in nvdapi.py).
@@ -21,10 +20,37 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 
 Base = declarative_base()
 
+# Define route constants - update to include all routes
+class Routes:
+    INDEX = 'index'
+    SEARCH = 'search'
+    VIEW_ALL = 'view_all'
+    CVE_DETAILS = 'cve_details'
+    VENDOR_ANALYSIS = 'vendor_analysis'
+    SEVERITY_DISTRIBUTION = 'severity_distribution'
+    MONTHLY_SUMMARY = 'monthly_summary'
+    TOP_VENDORS = 'top_vendors'
+    UPDATE_DATABASE = 'update_database'
+    UPDATE_STATUS = 'check_update_status'
+    # ... other routes ...
+
 # Create Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'NVD_CVE_Secret_Key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cve_database.db'
+
+# Am Anfang der Datei, nach der app-Initialisierung:
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
+@app.after_request
+def add_header(response):
+    """
+    Sorge dafür, dass die Antworten nicht gecached werden während der Entwicklung
+    """
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 # Define the static folder explicitly to ensure CSS files are served correctly
 app.static_folder = 'static'
@@ -108,8 +134,6 @@ def create_cve_table(engine):
             cpe_affected = sa.Column(sa.Text)
             cwe_id = sa.Column(sa.String(50), nullable=True)
             references = sa.Column(sa.Text)
-            has_exploit = sa.Column(sa.Boolean, default=False)  # Flag for exploits
-            exploit_data = sa.Column(sa.Text)  # JSON data for exploits
             
         Base.metadata.create_all(engine)
         logging.info("CVE table created successfully")
@@ -180,14 +204,6 @@ def import_cve_data_to_db(cve_list, engine, CVE):
             # Check if CVE already exists in database
             existing_cve = session.query(CVE).filter_by(cve_id=cve_id).first()
             if existing_cve:
-                # Check if we need to update with exploit data
-                if 'has_exploit' in cve_item and not existing_cve.has_exploit:
-                    # Update existing record with exploit data
-                    if 'cve' in cve_item and 'exploit_data' in cve_item['cve']:
-                        existing_cve.has_exploit = True
-                        existing_cve.exploit_data = json.dumps(cve_item['cve']['exploit_data'])
-                        session.commit()
-                        logging.info(f"Updated {cve_id} with exploit data")
                 continue
                 
             # Extract basic CVE information
@@ -230,13 +246,7 @@ def import_cve_data_to_db(cve_list, engine, CVE):
             
             # Extract references
             reference_data = cve_item.get('cve', {}).get('references', {}).get('reference_data', [])
-            references = [ref.get('url') for ref in reference_data if ref.get('url')]
-            
-            # Check for exploit data
-            has_exploit = cve_item.get('has_exploit', False)
-            exploit_data = None
-            if 'cve' in cve_item and 'exploit_data' in cve_item['cve']:
-                exploit_data = json.dumps(cve_item['cve']['exploit_data'])
+            references = [ref.get('url') for ref in reference_data]
             
             # Create new CVE record
             new_cve = CVE(
@@ -249,9 +259,7 @@ def import_cve_data_to_db(cve_list, engine, CVE):
                 severity=severity,
                 cpe_affected=','.join(cpe_affected),
                 cwe_id=cwe_id,
-                references=','.join(references),
-                has_exploit=has_exploit,
-                exploit_data=exploit_data
+                references=','.join(references)
             )
             
             session.add(new_cve)
@@ -359,7 +367,7 @@ def index():
             exploitable_only = request.form.get('exploitable') == 'on'
             severity_filter = request.form.get('severity', '')
 
-            return redirect(url_for('index', search_term=search_term, exploitable=exploitable_only, severity=severity_filter, search_performed=True))
+            return redirect(url_for(Routes.INDEX, search_term=search_term, exploitable=exploitable_only, severity=severity_filter, search_performed=True))
 
         if search_performed or search_term:
             query = session.query(CVE_Model)
@@ -376,7 +384,7 @@ def index():
                 query = query.filter(CVE_Model.severity == severity_filter)
 
             if exploitable_only:
-                query = query.filter(CVE_Model.has_exploit == True)
+                query = query.filter(CVE_Model.references.ilike('%exploit%'))
 
             total_results = query.count()
             query = query.order_by(CVE_Model.published_date.desc())
@@ -389,6 +397,10 @@ def index():
                 cve_api_details = nvd_api.get_cve(search_term)
                 if cve_api_details:
                     return render_template('cve_details.html', cve=cve_api_details, from_api=True)
+        else:
+            # Initialize these variables when no search is performed
+            total_results = 0
+            total_pages = 1
 
     except Exception as e:
         logging.error(f"Error during search or getting counts: {e}")
@@ -396,60 +408,27 @@ def index():
     finally:
         session.close()
 
-    return render_template('index.html', results=results, search_term=search_term, search_performed=search_performed, severity=severity_filter, severity_counts=severity_counts, total_cve_count=total_cve_count, current_page=page, total_pages=total_pages if 'total_pages' in locals() else 1, total_results=total_results if 'total_results' in locals() else 0, exploitable=exploitable_only)
+    return render_template('index.html', results=results, search_term=search_term, search_performed=search_performed, severity=severity_filter, severity_counts=severity_counts, total_cve_count=total_cve_count, current_page=page, total_pages=total_pages, total_results=total_results, exploitable=exploitable_only)
 
-@app.route('/search', methods=['GET', 'POST'])
+@app.route('/search')
 def search():
-    """Handle search requests from the search form"""
-    if request.method == 'POST':
-        # Process basic search
-        if 'search_term' in request.form and request.form['search_term'].strip():
-            search_term = request.form['search_term'].strip()
-            return redirect(url_for('index', search_term=search_term, search_performed='true'))
-        
-        # Process advanced search
-        search_params = {}
-        
-        # Handle keyword
-        if 'keyword' in request.form and request.form['keyword'].strip():
-            search_params['search_term'] = request.form['keyword'].strip()
-        
-        # Handle vendor
-        if 'vendor' in request.form and request.form['vendor'].strip():
-            search_params['vendor'] = request.form['vendor'].strip()
-        
-        # Handle severity
-        if 'severity' in request.form and request.form['severity']:
-            search_params['severity'] = request.form['severity']
-        
-        # Handle date range
-        if 'date_range' in request.form and request.form['date_range']:
-            search_params['date_range'] = request.form['date_range']
-        
-        # Handle options
-        if 'exploitable' in request.form:
-            search_params['exploitable'] = 'true'
-        
-        if 'has_patch' in request.form:
-            search_params['has_patch'] = 'true'
-        
-        # Add search_performed parameter
-        search_params['search_performed'] = 'true'
-        
-        # Log the search parameters for debugging
-        logging.info(f"Search parameters: {search_params}")
-        
-        return redirect(url_for('index', **search_params))
+    """
+    Dedicated search endpoint that redirects to index with search parameters.
+    This route exists to handle search references in templates.
+    """
+    search_term = request.args.get('search_term', '')
+    severity = request.args.get('severity', '')
+    exploitable = request.args.get('exploitable', 'false')
     
-    # If it's a GET request, just show the search page
-    try:
-        return render_template('search.html')
-    except Exception as e:
-        logging.error(f"Error rendering search template: {e}")
-        return render_template('error.html', error_message=f"An error occurred: {str(e)}")
+    # Redirect to index with search parameters
+    return redirect(url_for(Routes.INDEX, 
+                           search_term=search_term, 
+                           severity=severity,
+                           exploitable=exploitable,
+                           search_performed='true'))
 
 @app.route('/view_all')
-def view_all_entries():
+def view_all():  # Geändert von view_all_entries zu view_all
     """Display all CVEs in the database, with sorting options"""
     sort_by = request.args.get('sort', 'published_desc')
     page = request.args.get('page', 1, type=int)
@@ -519,12 +498,12 @@ def cve_details(cve_id):
 
         # If not in DB, try API
         if not cve_data:
-            return redirect(url_for('api_cve_details', cve_id=cve_id))
+            return redirect(url_for(Routes.CVE_DETAILS, cve_id=cve_id))
 
         if cve_data:
             return render_template('cve_details.html', cve=cve_data, from_api=from_api)
         else:
-            return redirect(url_for('api_cve_details', cve_id=cve_id))
+            return redirect(url_for(Routes.CVE_DETAILS, cve_id=cve_id))
 
     except Exception as e:
         logging.error(f"Error fetching CVE details for {cve_id}: {e}")
@@ -633,6 +612,8 @@ def monthly_summary():
     """Displays a summary of CVEs published per month, including severity breakdown."""
     summary_data = {}
     all_years_in_data = []
+    month_names_list = list(calendar.month_name)[1:]  # ["January", ..., "December"]
+    
     try:
         engine = create_local_cve_db()
         session = get_session(engine)
@@ -654,58 +635,100 @@ def monthly_summary():
         # Process data into the nested dictionary format required by the template
         # { year: { month: { count: X, critical: Y, high: Z, medium: A, low: B, unknown: C } } }
         for year, month, severity, count in monthly_severity_counts:
-            if year not in summary_data:
-                summary_data[year] = {}
-                # Initialize all months for the year to ensure they exist
-                for m in range(1, 13):
-                    summary_data[year][m] = {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
+            if year is not None and month is not None:  # Ensure valid data
+                year = int(year)  # Convert to integer for proper dictionary indexing
+                month = int(month)
 
-            if month not in summary_data[year]:
-                 # This case should ideally not happen if initialized above, but as a safeguard
-                 summary_data[year][month] = {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
+                if year not in summary_data:
+                    summary_data[year] = {}
+                    # Initialize all months for the year to ensure they exist
+                    for m in range(1, 13):
+                        summary_data[year][m] = {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
 
-            # Increment total count for the month
-            summary_data[year][month]['count'] += count
+                if month not in summary_data[year]:
+                    # This should not happen due to initialization above, but as a safeguard
+                    summary_data[year][month] = {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
 
-            # Increment severity count
-            severity_key = (severity or 'unknown').lower()
-            if severity_key in summary_data[year][month]:
-                summary_data[year][month][severity_key] += count
-            else:
-                 # Handle unexpected severity values if necessary, though 'unknown' should catch most
-                 summary_data[year][month]['unknown'] += count
+                # Increment total count for the month
+                summary_data[year][month]['count'] += count
 
+                # Increment severity count
+                severity_key = (severity or 'unknown').lower()
+                if severity_key in summary_data[year][month]:
+                    summary_data[year][month][severity_key] += count
+                else:
+                    # Handle unexpected severity values if necessary
+                    summary_data[year][month]['unknown'] += count
 
         # Determine available years and selected year
         current_year = datetime.now().year
         all_years_in_data = sorted(summary_data.keys(), reverse=True)
-        selected_year = request.args.get('year', type=int) # Get year from query param
+        selected_year = request.args.get('year', type=int)  # Get year from query param
 
         # If no year requested or requested year not in data, default to the latest year with data
         if not all_years_in_data:
-             all_years_in_data = [current_year] # Default to current year if no data at all
+             all_years_in_data = [current_year]  # Default to current year if no data at all
              selected_year = current_year
         elif selected_year is None or selected_year not in all_years_in_data:
-             selected_year = all_years_in_data[0] # Default to the latest year found in data
+             selected_year = all_years_in_data[0]  # Default to the latest year found in data
 
+        # Prepare data for Chart.js
+        # Prepare monthly count chart data
+        monthly_chart_data = {
+            'labels': month_names_list,
+            'datasets': [{
+                'label': f'CVEs in {selected_year}',
+                'data': [summary_data.get(selected_year, {}).get(month, {}).get('count', 0) for month in range(1, 13)],
+                'backgroundColor': 'rgba(54, 162, 235, 0.5)',
+                'borderColor': 'rgba(54, 162, 235, 1)',
+                'borderWidth': 1
+            }]
+        }
 
-        month_names_list = list(calendar.month_name)[1:]  # ["January", ..., "December"]
+        # Prepare severity breakdown chart data
+        severity_datasets = []
+        for severity, color in [
+            ('critical', 'rgba(220, 53, 69, 0.7)'),   # Red
+            ('high', 'rgba(253, 126, 20, 0.7)'),      # Orange
+            ('medium', 'rgba(255, 193, 7, 0.7)'),     # Yellow
+            ('low', 'rgba(25, 135, 84, 0.7)'),        # Green
+            ('unknown', 'rgba(108, 117, 125, 0.7)')   # Gray
+        ]:
+            severity_datasets.append({
+                'label': severity.title(),
+                'data': [summary_data.get(selected_year, {}).get(month, {}).get(severity, 0) for month in range(1, 13)],
+                'backgroundColor': color
+            })
+
+        severity_chart_data = {
+            'labels': month_names_list,
+            'datasets': severity_datasets
+        }
+
+        logging.info(f"Monthly summary data: Found data for {len(all_years_in_data)} years")
+        if selected_year in summary_data:
+            year_total = sum(summary_data[selected_year][m]['count'] for m in range(1, 13))
+            logging.info(f"Selected year {selected_year}: {year_total} CVEs")
+
+        # Pass the structured data to the template
+        return render_template(
+            'monthly_summary.html',
+            summary_data=summary_data,         # Nested dict: {year: {month: {count: X, critical: Y, ...}}}
+            years=all_years_in_data,           # List of years with data
+            selected_year=selected_year,       # The year to display initially
+            month_names=month_names_list,      # List of full month names
+            monthly_chart_json=json.dumps(monthly_chart_data),
+            severity_chart_json=json.dumps(severity_chart_data)
+        )
 
     except Exception as e:
         logging.error(f"Error fetching monthly summary: {e}")
-        return render_template('error.html', error_message="An error occurred while generating the monthly summary.")
+        import traceback
+        logging.error(traceback.format_exc())
+        return render_template('error.html', error_message=f"An error occurred while generating the monthly summary: {str(e)}")
     finally:
         if 'session' in locals() and session:
             session.close()
-
-    # Pass the structured data to the template
-    return render_template(
-        'monthly_summary.html',
-        summary_data=summary_data,         # Nested dict: {year: {month: {count: X, critical: Y, ...}}}
-        years=all_years_in_data,           # List of years with data
-        selected_year=selected_year,       # The year to display initially
-        month_names=month_names_list       # List of full month names
-    )
 
 @app.route('/severity_distribution')
 def severity_distribution():
@@ -719,6 +742,7 @@ def severity_distribution():
     low_series = []
     unknown_series = []
     cvss_ranges = [0] * 10  # Initialize list for 10 ranges (0-1, 1-2, ..., 9-10)
+    total_cve_count = 0  # Initialize to avoid reference before assignment
 
     try:
         engine = create_local_cve_db()
@@ -726,6 +750,31 @@ def severity_distribution():
 
         if CVE_Model is None:
             return render_template('error.html', error_message="Database model not initialized.")
+
+        # Prüfen, ob überhaupt Daten in der Datenbank sind
+        count_check = session.query(func.count(CVE_Model.id)).scalar()
+        if count_check == 0:
+            logging.warning("No CVE data found in database for severity distribution")
+            # Dummy data for template
+            dummy_data = {
+                'labels': [],
+                'datasets': []
+            }
+            return render_template('severity_distribution.html',
+                              total_cves=0,
+                              severity_counts={"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0},
+                              severity_percents={"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0},
+                              years=[],
+                              critical_series=[],
+                              high_series=[],
+                              medium_series=[],
+                              low_series=[],
+                              unknown_series=[],
+                              cvss_ranges=[0]*10,
+                              years_json=json.dumps([]),
+                              severity_trend_data=json.dumps(dummy_data),
+                              cvss_chart_data=json.dumps(dummy_data),
+                              no_data=True)
 
         # 1. Overall Severity Counts and Percentages
         severity_query = session.query(
@@ -799,28 +848,96 @@ def severity_distribution():
                 if 0 <= index < 10:  # Ensure index is within bounds (0-9)
                     cvss_ranges[index] = count
                 elif index == 10:  # Handle score 10.0, place it in the last bin (9-10)
-                    cvss_ranges[9] = count
+                    cvss_ranges[9] += count
 
-    except Exception as e:
-        logging.error(f"Error fetching severity distribution data: {e}")
-        import traceback
-        logging.error(traceback.format_exc())
-        return render_template('error.html', error_message="An error occurred while generating the severity distribution.")
-    finally:
-        if 'session' in locals() and session:
-            session.close()
+        # Logging für Debug-Zwecke
+        logging.info(f"Severity distribution: total CVEs: {total_cve_count}")
+        logging.info(f"Severity counts: {severity_counts}")
+        logging.info(f"Years: {years_for_template}")
+        
+        # Bereite Chart.js Daten vor
+        # Years for chart
+        years_json = json.dumps(years_for_template)
+        
+        # Severity trends data
+        severity_trend_data = json.dumps({
+            'labels': years_for_template,
+            'datasets': [
+                {
+                    'label': 'Critical',
+                    'data': critical_series,
+                    'backgroundColor': 'rgba(220, 53, 69, 0.6)',  # Red
+                    'borderColor': 'rgba(220, 53, 69, 1)',
+                    'borderWidth': 1
+                },
+                {
+                    'label': 'High',
+                    'data': high_series,
+                    'backgroundColor': 'rgba(253, 126, 20, 0.6)',  # Orange
+                    'borderColor': 'rgba(253, 126, 20, 1)',
+                    'borderWidth': 1
+                },
+                {
+                    'label': 'Medium',
+                    'data': medium_series,
+                    'backgroundColor': 'rgba(255, 193, 7, 0.6)',  # Yellow
+                    'borderColor': 'rgba(255, 193, 7, 1)',
+                    'borderWidth': 1
+                },
+                {
+                    'label': 'Low',
+                    'data': low_series,
+                    'backgroundColor': 'rgba(25, 135, 84, 0.6)',  # Green
+                    'borderColor': 'rgba(25, 135, 84, 1)',
+                    'borderWidth': 1
+                },
+                {
+                    'label': 'Unknown',
+                    'data': unknown_series,
+                    'backgroundColor': 'rgba(108, 117, 125, 0.6)',  # Gray
+                    'borderColor': 'rgba(108, 117, 125, 1)',
+                    'borderWidth': 1
+                }
+            ]
+        })
+        
+        # CVSS distribution data
+        cvss_labels = ['0-1', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9', '9-10']
+        cvss_chart_data = json.dumps({
+            'labels': cvss_labels,
+            'datasets': [{
+                'label': 'CVSS Score Distribution',
+                'data': cvss_ranges,
+                'backgroundColor': 'rgba(54, 162, 235, 0.6)',  # Blue
+                'borderColor': 'rgba(54, 162, 235, 1)',
+                'borderWidth': 1
+            }]
+        })
 
-    return render_template('severity_distribution.html',
-                           total_cves=total_cve_count,  # Pass total count
+        return render_template('severity_distribution.html',
+                           total_cves=total_cve_count,
                            severity_counts=severity_counts,
                            severity_percents=severity_percents,
-                           years=years_for_template,  # Pass list of years
+                           years=years_for_template,
                            critical_series=critical_series,
                            high_series=high_series,
                            medium_series=medium_series,
                            low_series=low_series,
                            unknown_series=unknown_series,
-                           cvss_ranges=cvss_ranges)  # Pass list of counts per range
+                           cvss_ranges=cvss_ranges,
+                           years_json=years_json,
+                           severity_trend_data=severity_trend_data,
+                           cvss_chart_data=cvss_chart_data,
+                           no_data=False)
+
+    except Exception as e:
+        logging.error(f"Error fetching severity distribution data: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return render_template('error.html', error_message=f"An error occurred while generating the severity distribution: {str(e)}")
+    finally:
+        if 'session' in locals() and session:
+            session.close()
 
 @app.route('/update_database')
 def update_database():
@@ -845,36 +962,6 @@ def update_database():
     
     return render_template('update_status.html', status=db_update_status)
 
-@app.route('/enhanced_update_database')
-def enhanced_update_database():
-    """
-    Update the local CVE database with latest data from all sources including:
-    1. NVD Feed (2002-present)
-    2. Historical CVE data (1992-2002)
-    3. Additional sources like CIRCL and MITRE
-    """
-    global enhanced_status
-    
-    if enhanced_status['is_updating']:
-        return render_template('update_status.html', status=enhanced_status, enhanced=True)
-    
-    # Reset/initialize status object
-    enhanced_status['is_updating'] = True
-    enhanced_status['progress'] = 0
-    enhanced_status['total_years'] = datetime.now().year - 1992 + 1
-    enhanced_status['current_year'] = None
-    enhanced_status['current_source'] = "Initializing"
-    enhanced_status['error'] = None
-    enhanced_status['cves_added'] = 0
-    enhanced_status['sources_processed'] = 0
-    
-    # Start update in background thread
-    update_thread = threading.Thread(target=enhanced_update_database_task)
-    update_thread.daemon = True
-    update_thread.start()
-    
-    return render_template('update_status.html', status=enhanced_status, enhanced=True)
-
 @app.route('/update_status')
 def check_update_status():
     """Check the status of the database update"""
@@ -888,268 +975,6 @@ def api_cve_details(cve_id):
     if cve_details:
         return jsonify(cve_details)
     return jsonify({"error": f"CVE {cve_id} not found"}), 404
-
-@app.route('/api/exploit-code/<exploit_id>')
-def api_exploit_code(exploit_id):
-    """API endpoint to fetch exploit code from Exploit-DB"""
-    try:
-        from modules.additional_sources import ExploitDBAdapter
-        
-        # Fetch the exploit code from local storage if available, otherwise download it
-        exploit_code = ExploitDBAdapter.fetch_actual_exploit_code(exploit_id)
-        
-        if exploit_code:
-            return exploit_code
-        else:
-            return "No exploit code available for this ID. You can view the exploit at https://www.exploit-db.com/exploits/" + exploit_id, 404
-    except Exception as e:
-        logging.error(f"Error fetching exploit code for ID {exploit_id}: {e}")
-        return f"Error fetching exploit code: {str(e)}", 500
-
-@app.route('/exploits/manage', methods=['GET', 'POST'])
-def manage_exploits():
-    """Management interface for Exploit-DB exploits"""
-    from modules.additional_sources import ExploitDBAdapter
-    
-    # Initialize status messages
-    status = {"success": None, "error": None, "count": 0}
-    
-    # Handle POST requests for actions
-    if request.method == 'POST':
-        action = request.form.get('action')
-        
-        if action == 'import_metadata':
-            try:
-                # Import all exploit metadata
-                count = ExploitDBAdapter.import_all_exploit_metadata()
-                status["success"] = f"Successfully imported metadata for {count} exploits"
-                status["count"] = count
-            except Exception as e:
-                status["error"] = f"Error importing exploit metadata: {e}"
-                logging.error(f"Error importing exploit metadata: {e}")
-        
-        elif action == 'download_exploits':
-            try:
-                # Get parameters
-                limit = request.form.get('limit', type=int)
-                cve_only = request.form.get('cve_only') == 'on'
-                
-                # Download exploits
-                count = ExploitDBAdapter.download_all_exploits(limit=limit, filter_cve_only=cve_only)
-                status["success"] = f"Successfully downloaded {count} exploits"
-                status["count"] = count
-            except Exception as e:
-                status["error"] = f"Error downloading exploits: {e}"
-                logging.error(f"Error downloading exploits: {e}")
-        
-        elif action == 'download_exploit':
-            try:
-                # Get exploit ID
-                exploit_id = request.form.get('exploit_id')
-                if not exploit_id:
-                    status["error"] = "No exploit ID provided"
-                else:
-                    # Download specific exploit
-                    file_path = ExploitDBAdapter.download_and_store_exploit(exploit_id)
-                    if file_path:
-                        status["success"] = f"Successfully downloaded exploit ID {exploit_id} to {file_path}"
-                        status["count"] = 1
-                    else:
-                        status["error"] = f"Failed to download exploit ID {exploit_id}"
-            except Exception as e:
-                status["error"] = f"Error downloading exploit: {e}"
-                logging.error(f"Error downloading exploit: {e}")
-    
-    # Get statistics for the view
-    try:
-        # Initialize database if needed
-        ExploitDBAdapter.init_exploit_db()
-        
-        # Get statistics from database
-        db_path = os.path.join(os.path.dirname(__file__), 'exploit_cache.db')
-        exploits_dir = os.path.join(os.path.dirname(__file__), 'exploits')
-        
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Count exploit metadata
-        cursor.execute("SELECT COUNT(*) FROM exploit_metadata")
-        metadata_count = cursor.fetchone()[0]
-        
-        # Count exploits with CVE IDs
-        cursor.execute("SELECT COUNT(*) FROM exploit_metadata WHERE cve_id != ''")
-        cve_exploits_count = cursor.fetchone()[0]
-        
-        # Count downloaded exploits
-        cursor.execute("SELECT COUNT(*) FROM exploit_metadata WHERE download_status = 1")
-        downloaded_count = cursor.fetchone()[0]
-        
-        # Count files in exploits directory
-        file_count = 0
-        if os.path.exists(exploits_dir):
-            file_count = len([f for f in os.listdir(exploits_dir) if f.endswith('.txt')])
-        
-        # Get recently added exploits
-        cursor.execute("""
-            SELECT m.id, m.description, m.cve_id, m.date
-            FROM exploit_metadata m
-            WHERE m.download_status = 1
-            ORDER BY m.id DESC LIMIT 10
-        """)
-        recent_exploits = cursor.fetchall()
-        
-        conn.close()
-        
-        stats = {
-            "metadata_count": metadata_count,
-            "cve_exploits_count": cve_exploits_count,
-            "downloaded_count": downloaded_count,
-            "file_count": file_count,
-            "recent_exploits": recent_exploits
-        }
-        
-        return render_template('exploits_manager.html', stats=stats, status=status)
-    
-    except Exception as e:
-        status["error"] = f"Error retrieving exploit statistics: {e}"
-        logging.error(f"Error retrieving exploit statistics: {e}")
-        return render_template('exploits_manager.html', stats={}, status=status)
-
-@app.route('/exploits/list')
-def list_exploits():
-    """List all available exploits with filtering options"""
-    from modules.additional_sources import ExploitDBAdapter
-    
-    try:
-        # Get query parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 50, type=int)
-        cve_filter = request.args.get('cve', '')
-        downloaded_only = request.args.get('downloaded', '').lower() == 'true'
-        
-        # Initialize database if needed
-        ExploitDBAdapter.init_exploit_db()
-        
-        # Query database
-        db_path = os.path.join(os.path.dirname(__file__), 'exploit_cache.db')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        # Build query
-        query = """
-            SELECT m.id, m.description, m.cve_id, m.date, m.author, m.type, m.platform, m.download_status
-            FROM exploit_metadata m
-        """
-        
-        query_params = []
-        where_clauses = []
-        
-        if cve_filter:
-            where_clauses.append("m.cve_id LIKE ?")
-            query_params.append(f"%{cve_filter}%")
-        
-        if downloaded_only:
-            where_clauses.append("m.download_status = 1")
-        
-        if where_clauses:
-            query += " WHERE " + " AND ".join(where_clauses)
-        
-        # Count total results
-        count_query = f"SELECT COUNT(*) FROM ({query})"
-        cursor.execute(count_query, query_params)
-        total_count = cursor.fetchone()[0]
-        
-        # Add pagination
-        query += " ORDER BY m.id DESC LIMIT ? OFFSET ?"
-        query_params.extend([per_page, (page - 1) * per_page])
-        
-        # Execute query
-        cursor.execute(query, query_params)
-        exploits = cursor.fetchall()
-        
-        conn.close()
-        
-        # Calculate pagination stats
-        total_pages = (total_count + per_page - 1) // per_page
-        
-        return render_template('exploits_list.html', 
-                               exploits=exploits, 
-                               page=page, 
-                               total_pages=total_pages,
-                               per_page=per_page, 
-                               total_count=total_count,
-                               cve_filter=cve_filter, 
-                               downloaded_only=downloaded_only)
-    
-    except Exception as e:
-        logging.error(f"Error listing exploits: {e}")
-        return render_template('error.html', error_message=f"Error listing exploits: {e}")
-
-@app.route('/exploits/for_cve/<cve_id>')
-def exploits_for_cve(cve_id):
-    """Show all exploits available for a specific CVE"""
-    from modules.additional_sources import ExploitDBAdapter
-    
-    try:
-        # Get exploits for this CVE
-        exploits = ExploitDBAdapter.get_exploits_for_cve(cve_id)
-        
-        # Check if we need to download any exploits
-        for exploit in exploits:
-            if not exploit.get('downloaded', False):
-                exploit_id = exploit.get('exploit_id')
-                # Start a background download
-                threading.Thread(
-                    target=ExploitDBAdapter.download_and_store_exploit, 
-                    args=(exploit_id,), 
-                    daemon=True
-                ).start()
-        
-        return render_template('cve_exploits.html', cve_id=cve_id, exploits=exploits)
-    
-    except Exception as e:
-        logging.error(f"Error fetching exploits for CVE {cve_id}: {e}")
-        return render_template('error.html', error_message=f"Error fetching exploits for CVE {cve_id}: {e}")
-
-@app.route('/exploits/view/<exploit_id>')
-def view_exploit(exploit_id):
-    """View a specific exploit with metadata and code"""
-    from modules.additional_sources import ExploitDBAdapter
-    
-    try:
-        # Get exploit metadata
-        db_path = os.path.join(os.path.dirname(__file__), 'exploit_cache.db')
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT m.id, m.description, m.cve_id, m.date, m.author, m.type, m.platform, m.download_status
-            FROM exploit_metadata m
-            WHERE m.id = ?
-        """, (exploit_id,))
-        
-        metadata = cursor.fetchone()
-        conn.close()
-        
-        if not metadata:
-            return render_template('error.html', error_message=f"Exploit ID {exploit_id} not found in database")
-        
-        # Get exploit code
-        exploit_code = ExploitDBAdapter.fetch_actual_exploit_code(exploit_id)
-        
-        # If not available locally, try to download it
-        if not exploit_code:
-            ExploitDBAdapter.download_and_store_exploit(exploit_id)
-            exploit_code = ExploitDBAdapter.fetch_actual_exploit_code(exploit_id)
-        
-        return render_template('exploit_view.html', 
-                              metadata=metadata,
-                              exploit_code=exploit_code,
-                              exploit_id=exploit_id)
-    
-    except Exception as e:
-        logging.error(f"Error viewing exploit {exploit_id}: {e}")
-        return render_template('error.html', error_message=f"Error viewing exploit {exploit_id}: {e}")
 
 @app.route('/db_status')
 def db_status():
@@ -1193,9 +1018,8 @@ def db_status():
 def vendor_analysis():
     """
     Route to display an analysis of CVEs by vendor, including severity breakdown.
-    Fetches vendor data and renders the vendor analysis template.
     """
-    top_n = 30 # Number of top vendors to display
+    top_n = 30  # Number of top vendors to display
     vendor_details = {}
 
     try:
@@ -1203,18 +1027,17 @@ def vendor_analysis():
         session = get_session(engine)
 
         if CVE_Model is None:
-             return render_template('error.html', error_message="Database model not initialized.")
+            return render_template('error.html', error_message="Database model not initialized.")
 
         # Query necessary data: cpe_affected and severity for all relevant CVEs
-        # Optimization: Query only necessary columns
         cve_data_query = session.query(CVE_Model.cpe_affected, CVE_Model.severity)\
                                 .filter(CVE_Model.cpe_affected != '', CVE_Model.cpe_affected.isnot(None))\
                                 .all()
 
         # Process data to aggregate vendor counts and severity distributions
-        for cpe_string_tuple, severity in cve_data_query:
-            if cpe_string_tuple:
-                cpes = cpe_string_tuple.split(',')
+        for cpe_string, severity in cve_data_query:
+            if cpe_string:
+                cpes = cpe_string.split(',')
                 vendors_in_cve = set()
                 for cpe in cpes:
                     parts = cpe.split(':')
@@ -1242,39 +1065,68 @@ def vendor_analysis():
         top_vendors_list = sorted_vendors_list[:top_n]
         top_vendors_dict = dict(top_vendors_list)
 
-        session.close()
-
         # Prepare data for Chart.js (Top N Vendors by Count)
-        chart_labels = [v[0] for v in top_vendors_list] # Vendor names
-        chart_data = [v[1]['count'] for v in top_vendors_list] # Total counts
+        chart_labels = [v[0] for v in top_vendors_list]  # Vendor names
+        chart_data = [v[1]['count'] for v in top_vendors_list]  # Total counts
+        
+        # Prepare severity breakdown data for stacked bar chart
+        severity_datasets = []
+        for severity, color in [
+            ("CRITICAL", "rgba(220, 53, 69, 0.8)"),   # Red
+            ("HIGH", "rgba(253, 126, 20, 0.8)"),      # Orange  
+            ("MEDIUM", "rgba(255, 193, 7, 0.8)"),     # Yellow
+            ("LOW", "rgba(25, 135, 84, 0.8)"),        # Green
+            ("UNKNOWN", "rgba(108, 117, 125, 0.8)")   # Gray
+        ]:
+            severity_datasets.append({
+                'label': severity,
+                'data': [v[1]['severities'][severity] for v in top_vendors_list],
+                'backgroundColor': color,
+            })
+            
         chart_json = json.dumps({
             'labels': chart_labels,
             'datasets': [{
                 'label': 'Total CVEs',
                 'data': chart_data,
-                'backgroundColor': 'rgba(54, 162, 235, 0.6)', # Example color
+                'backgroundColor': 'rgba(54, 162, 235, 0.6)',  # Blue
                 'borderColor': 'rgba(54, 162, 235, 1)',
                 'borderWidth': 1
             }]
         })
+        
+        # Prepare severity breakdown data
+        severity_chart_json = json.dumps({
+            'labels': chart_labels,
+            'datasets': severity_datasets
+        })
 
         return render_template('vendor_analysis.html',
-                               vendors=top_vendors_dict, # Pass the dict of top vendors
-                               chart_json=chart_json,
-                               top_n=top_n)
+                              vendors=top_vendors_dict,  # Pass the dict of top vendors
+                              chart_json=chart_json,
+                              severity_chart_json=severity_chart_json,
+                              top_n=top_n)
     except Exception as e:
         logging.error(f"Error in /vendor_analysis route: {e}")
-        # Log the full traceback for debugging
         import traceback
         logging.error(traceback.format_exc())
-        return render_template('error.html', error_message="An error occurred while loading vendor analysis data. Please try again later."), 500
+        return render_template('error.html', error_message=f"An error occurred while loading vendor analysis data: {str(e)}"), 500
+    finally:
+        if 'session' in locals() and session:
+            session.close()
 
 # Add a temporary dummy route to test the BuildError
 @app.route('/top_vendors_placeholder')
-def top_vendors():
+def top_vendors_placeholder():
     # This is a placeholder. Replace with actual logic or remove if not needed.
     # You might want to return a simple template or just text.
     return "Top Vendors Page (Placeholder)", 200
+
+# Füge die top_vendors-Route mit Umleitung hinzu
+@app.route('/top_vendors')
+def top_vendors():
+    """Redirect to vendor_analysis which shows top vendors."""
+    return redirect(url_for(Routes.VENDOR_ANALYSIS))
 
 @app.route('/static/logo.png')
 def serve_logo():
@@ -1283,6 +1135,20 @@ def serve_logo():
     Dadurch wird der 404-Fehler bei der Anfrage nach /static/logo.png vermieden.
     """
     return redirect(url_for('static', filename='img/logo.png', v=int(datetime.now().timestamp())))
+
+@app.errorhandler(BuildError)
+def handle_build_error(error):
+    """Handle URL build errors by redirecting to home page."""
+    logging.error(f"Build Error occurred: {error}")
+    return redirect(url_for(Routes.INDEX))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('error.html', error_message="Page not found. The requested URL does not exist."), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('error.html', error_message="Internal server error. Please try again later."), 500
 
 # Run the application
 if __name__ == '__main__':

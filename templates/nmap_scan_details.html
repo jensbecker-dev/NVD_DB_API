@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Nmap Scan Details | NVD CVE Database API{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('nmap_scanner') }}">Nmap Scanner</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Scan Details</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Scan Details</h1>
+        <a href="{{ url_for('nmap_scanner') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Zurück zum Scanner
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-info-circle"></i> Scan-Informationen
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">Scan-ID:</dt>
+                        <dd class="col-sm-8">{{ scan.scan_id }}</dd>
+                        
+                        <dt class="col-sm-4">Ziel:</dt>
+                        <dd class="col-sm-8">{{ scan.target }}</dd>
+                        
+                        <dt class="col-sm-4">Scan-Zeit:</dt>
+                        <dd class="col-sm-8">{{ scan.scan_time.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">Hosts:</dt>
+                        <dd class="col-sm-8">{{ scan.num_hosts }}</dd>
+                        
+                        <dt class="col-sm-4">Schwachstellen:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-danger">{{ scan.critical_vulnerabilities }} Kritisch</span>
+                            <span class="badge bg-warning text-dark">{{ scan.high_vulnerabilities }} Hoch</span>
+                            <span class="badge bg-primary">{{ scan.total_vulnerabilities }} Total</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-server"></i> Gefundene Hosts
+        </div>
+        <div class="card-body">
+            {% if scan.hosts %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>IP-Adresse</th>
+                            <th>Hostname</th>
+                            <th>Betriebssystem</th>
+                            <th>Offene Ports</th>
+                            <th>Schwachstellen</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for host in scan.hosts %}
+                        <tr>
+                            <td>{{ host.ip_address }}</td>
+                            <td>{{ host.hostname or 'N/A' }}</td>
+                            <td>{{ host.os_name or 'Unbekannt' }}</td>
+                            <td>{{ host.ports|length }}</td>
+                            <td>
+                                {% if host.vulnerability_count > 0 %}
+                                <span class="badge bg-danger">{{ host.vulnerability_count }}</span>
+                                {% else %}
+                                <span class="badge bg-success">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('nmap_host_details', scan_id=scan.scan_id, ip_address=host.ip_address) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-search"></i> Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                Keine Hosts gefunden.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-exclamation-triangle"></i> Schwachstellen Zusammenfassung
+        </div>
+        <div class="card-body">
+            {% if scan.total_vulnerabilities > 0 %}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="progress" style="height: 25px;">
+                        {% if scan.critical_vulnerabilities > 0 %}
+                        <div class="progress-bar bg-danger" role="progressbar" 
+                             style="width: {{ (scan.critical_vulnerabilities / scan.total_vulnerabilities * 100)|round }}%;" 
+                             aria-valuenow="{{ scan.critical_vulnerabilities }}" aria-valuemin="0" aria-valuemax="{{ scan.total_vulnerabilities }}">
+                            {{ scan.critical_vulnerabilities }} Kritisch
+                        </div>
+                        {% endif %}
+                        
+                        {% if scan.high_vulnerabilities > 0 %}
+                        <div class="progress-bar bg-warning text-dark" role="progressbar" 
+                             style="width: {{ (scan.high_vulnerabilities / scan.total_vulnerabilities * 100)|round }}%;" 
+                             aria-valuenow="{{ scan.high_vulnerabilities }}" aria-valuemin="0" aria-valuemax="{{ scan.total_vulnerabilities }}">
+                            {{ scan.high_vulnerabilities }} Hoch
+                        </div>
+                        {% endif %}
+                        
+                        {% set other_vulns = scan.total_vulnerabilities - scan.critical_vulnerabilities - scan.high_vulnerabilities %}
+                        {% if other_vulns > 0 %}
+                        <div class="progress-bar bg-info" role="progressbar" 
+                             style="width: {{ (other_vulns / scan.total_vulnerabilities * 100)|round }}%;" 
+                             aria-valuenow="{{ other_vulns }}" aria-valuemin="0" aria-valuemax="{{ scan.total_vulnerabilities }}">
+                            {{ other_vulns }} Andere
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-around">
+                        <div class="text-center">
+                            <div class="h1 text-danger">{{ scan.critical_vulnerabilities }}</div>
+                            <div>Kritisch</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="h1 text-warning">{{ scan.high_vulnerabilities }}</div>
+                            <div>Hoch</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="h1 text-primary">{{ scan.total_vulnerabilities }}</div>
+                            <div>Total</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if host_vulnerabilities %}
+            <h5>Top Schwachstellen nach Host:</h5>
+            <ul class="list-group">
+                {% for host in host_vulnerabilities %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ host.ip_address }} {% if host.hostname %}({{ host.hostname }}){% endif %}
+                    <span class="badge bg-danger rounded-pill">{{ host.vulnerability_count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            
+            {% else %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> Keine Schwachstellen gefunden. Alle Systeme scheinen sicher zu sein.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

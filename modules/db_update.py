@@ -259,7 +259,7 @@ def comprehensive_database_update(engine, CVE_Model):
         db_update_status['current_source'] = "Historical Data (1992-2002)"
         logger.info("Starting historical CVE data import (1992-2002)...")
         
-        historical_cves = fetch_historical_cve_data(start_year=1992, end_year=2002)
+        historical_cves = fetch_historical_cve_data()
         if historical_cves:
             historical_cves_added = import_cve_data_to_db(historical_cves, engine, CVE_Model)
             total_cves_added += historical_cves_added
