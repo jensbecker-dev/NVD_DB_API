@@ -421,15 +421,20 @@ def index():
 
     return render_template('index.html', results=results, search_term=search_term, search_performed=search_performed, severity=severity_filter, severity_counts=severity_counts, total_cve_count=total_cve_count, current_page=page, total_pages=total_pages, total_results=total_results, exploitable=exploitable_only)
 
-@app.route('/search')
+@app.route('/search', methods=['GET', 'POST'])
 def search():
     """
     Dedicated search endpoint that redirects to index with search parameters.
     This route exists to handle search references in templates.
     """
-    search_term = request.args.get('search_term', '')
-    severity = request.args.get('severity', '')
-    exploitable = request.args.get('exploitable', 'false')
+    if request.method == 'POST':
+        search_term = request.form.get('search_term', '')
+        severity = request.form.get('severity', '')
+        exploitable = 'true' if request.form.get('exploitable') == 'on' else 'false'
+    else:
+        search_term = request.args.get('search_term', '')
+        severity = request.args.get('severity', '')
+        exploitable = request.args.get('exploitable', 'false')
     
     # Redirect to index with search parameters
     return redirect(url_for(Routes.INDEX, 
