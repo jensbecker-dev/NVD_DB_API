@@ -10,6 +10,7 @@ from modules.db_update import enhanced_update_database_task, db_update_status as
 from datetime import datetime
 import threading
 import calendar
+import sqlite3
 
 # Note: The 'RequestsDependencyWarning' suggests installing 'chardet' or 'charset_normalizer'
 # for optimal character encoding detection by the requests library (likely used in nvdapi.py).
@@ -887,6 +888,268 @@ def api_cve_details(cve_id):
     if cve_details:
         return jsonify(cve_details)
     return jsonify({"error": f"CVE {cve_id} not found"}), 404
+
+@app.route('/api/exploit-code/<exploit_id>')
+def api_exploit_code(exploit_id):
+    """API endpoint to fetch exploit code from Exploit-DB"""
+    try:
+        from modules.additional_sources import ExploitDBAdapter
+        
+        # Fetch the exploit code from local storage if available, otherwise download it
+        exploit_code = ExploitDBAdapter.fetch_actual_exploit_code(exploit_id)
+        
+        if exploit_code:
+            return exploit_code
+        else:
+            return "No exploit code available for this ID. You can view the exploit at https://www.exploit-db.com/exploits/" + exploit_id, 404
+    except Exception as e:
+        logging.error(f"Error fetching exploit code for ID {exploit_id}: {e}")
+        return f"Error fetching exploit code: {str(e)}", 500
+
+@app.route('/exploits/manage', methods=['GET', 'POST'])
+def manage_exploits():
+    """Management interface for Exploit-DB exploits"""
+    from modules.additional_sources import ExploitDBAdapter
+    
+    # Initialize status messages
+    status = {"success": None, "error": None, "count": 0}
+    
+    # Handle POST requests for actions
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'import_metadata':
+            try:
+                # Import all exploit metadata
+                count = ExploitDBAdapter.import_all_exploit_metadata()
+                status["success"] = f"Successfully imported metadata for {count} exploits"
+                status["count"] = count
+            except Exception as e:
+                status["error"] = f"Error importing exploit metadata: {e}"
+                logging.error(f"Error importing exploit metadata: {e}")
+        
+        elif action == 'download_exploits':
+            try:
+                # Get parameters
+                limit = request.form.get('limit', type=int)
+                cve_only = request.form.get('cve_only') == 'on'
+                
+                # Download exploits
+                count = ExploitDBAdapter.download_all_exploits(limit=limit, filter_cve_only=cve_only)
+                status["success"] = f"Successfully downloaded {count} exploits"
+                status["count"] = count
+            except Exception as e:
+                status["error"] = f"Error downloading exploits: {e}"
+                logging.error(f"Error downloading exploits: {e}")
+        
+        elif action == 'download_exploit':
+            try:
+                # Get exploit ID
+                exploit_id = request.form.get('exploit_id')
+                if not exploit_id:
+                    status["error"] = "No exploit ID provided"
+                else:
+                    # Download specific exploit
+                    file_path = ExploitDBAdapter.download_and_store_exploit(exploit_id)
+                    if file_path:
+                        status["success"] = f"Successfully downloaded exploit ID {exploit_id} to {file_path}"
+                        status["count"] = 1
+                    else:
+                        status["error"] = f"Failed to download exploit ID {exploit_id}"
+            except Exception as e:
+                status["error"] = f"Error downloading exploit: {e}"
+                logging.error(f"Error downloading exploit: {e}")
+    
+    # Get statistics for the view
+    try:
+        # Initialize database if needed
+        ExploitDBAdapter.init_exploit_db()
+        
+        # Get statistics from database
+        db_path = os.path.join(os.path.dirname(__file__), 'exploit_cache.db')
+        exploits_dir = os.path.join(os.path.dirname(__file__), 'exploits')
+        
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Count exploit metadata
+        cursor.execute("SELECT COUNT(*) FROM exploit_metadata")
+        metadata_count = cursor.fetchone()[0]
+        
+        # Count exploits with CVE IDs
+        cursor.execute("SELECT COUNT(*) FROM exploit_metadata WHERE cve_id != ''")
+        cve_exploits_count = cursor.fetchone()[0]
+        
+        # Count downloaded exploits
+        cursor.execute("SELECT COUNT(*) FROM exploit_metadata WHERE download_status = 1")
+        downloaded_count = cursor.fetchone()[0]
+        
+        # Count files in exploits directory
+        file_count = 0
+        if os.path.exists(exploits_dir):
+            file_count = len([f for f in os.listdir(exploits_dir) if f.endswith('.txt')])
+        
+        # Get recently added exploits
+        cursor.execute("""
+            SELECT m.id, m.description, m.cve_id, m.date
+            FROM exploit_metadata m
+            WHERE m.download_status = 1
+            ORDER BY m.id DESC LIMIT 10
+        """)
+        recent_exploits = cursor.fetchall()
+        
+        conn.close()
+        
+        stats = {
+            "metadata_count": metadata_count,
+            "cve_exploits_count": cve_exploits_count,
+            "downloaded_count": downloaded_count,
+            "file_count": file_count,
+            "recent_exploits": recent_exploits
+        }
+        
+        return render_template('exploits_manager.html', stats=stats, status=status)
+    
+    except Exception as e:
+        status["error"] = f"Error retrieving exploit statistics: {e}"
+        logging.error(f"Error retrieving exploit statistics: {e}")
+        return render_template('exploits_manager.html', stats={}, status=status)
+
+@app.route('/exploits/list')
+def list_exploits():
+    """List all available exploits with filtering options"""
+    from modules.additional_sources import ExploitDBAdapter
+    
+    try:
+        # Get query parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        cve_filter = request.args.get('cve', '')
+        downloaded_only = request.args.get('downloaded', '').lower() == 'true'
+        
+        # Initialize database if needed
+        ExploitDBAdapter.init_exploit_db()
+        
+        # Query database
+        db_path = os.path.join(os.path.dirname(__file__), 'exploit_cache.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Build query
+        query = """
+            SELECT m.id, m.description, m.cve_id, m.date, m.author, m.type, m.platform, m.download_status
+            FROM exploit_metadata m
+        """
+        
+        query_params = []
+        where_clauses = []
+        
+        if cve_filter:
+            where_clauses.append("m.cve_id LIKE ?")
+            query_params.append(f"%{cve_filter}%")
+        
+        if downloaded_only:
+            where_clauses.append("m.download_status = 1")
+        
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
+        
+        # Count total results
+        count_query = f"SELECT COUNT(*) FROM ({query})"
+        cursor.execute(count_query, query_params)
+        total_count = cursor.fetchone()[0]
+        
+        # Add pagination
+        query += " ORDER BY m.id DESC LIMIT ? OFFSET ?"
+        query_params.extend([per_page, (page - 1) * per_page])
+        
+        # Execute query
+        cursor.execute(query, query_params)
+        exploits = cursor.fetchall()
+        
+        conn.close()
+        
+        # Calculate pagination stats
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        return render_template('exploits_list.html', 
+                               exploits=exploits, 
+                               page=page, 
+                               total_pages=total_pages,
+                               per_page=per_page, 
+                               total_count=total_count,
+                               cve_filter=cve_filter, 
+                               downloaded_only=downloaded_only)
+    
+    except Exception as e:
+        logging.error(f"Error listing exploits: {e}")
+        return render_template('error.html', error_message=f"Error listing exploits: {e}")
+
+@app.route('/exploits/for_cve/<cve_id>')
+def exploits_for_cve(cve_id):
+    """Show all exploits available for a specific CVE"""
+    from modules.additional_sources import ExploitDBAdapter
+    
+    try:
+        # Get exploits for this CVE
+        exploits = ExploitDBAdapter.get_exploits_for_cve(cve_id)
+        
+        # Check if we need to download any exploits
+        for exploit in exploits:
+            if not exploit.get('downloaded', False):
+                exploit_id = exploit.get('exploit_id')
+                # Start a background download
+                threading.Thread(
+                    target=ExploitDBAdapter.download_and_store_exploit, 
+                    args=(exploit_id,), 
+                    daemon=True
+                ).start()
+        
+        return render_template('cve_exploits.html', cve_id=cve_id, exploits=exploits)
+    
+    except Exception as e:
+        logging.error(f"Error fetching exploits for CVE {cve_id}: {e}")
+        return render_template('error.html', error_message=f"Error fetching exploits for CVE {cve_id}: {e}")
+
+@app.route('/exploits/view/<exploit_id>')
+def view_exploit(exploit_id):
+    """View a specific exploit with metadata and code"""
+    from modules.additional_sources import ExploitDBAdapter
+    
+    try:
+        # Get exploit metadata
+        db_path = os.path.join(os.path.dirname(__file__), 'exploit_cache.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT m.id, m.description, m.cve_id, m.date, m.author, m.type, m.platform, m.download_status
+            FROM exploit_metadata m
+            WHERE m.id = ?
+        """, (exploit_id,))
+        
+        metadata = cursor.fetchone()
+        conn.close()
+        
+        if not metadata:
+            return render_template('error.html', error_message=f"Exploit ID {exploit_id} not found in database")
+        
+        # Get exploit code
+        exploit_code = ExploitDBAdapter.fetch_actual_exploit_code(exploit_id)
+        
+        # If not available locally, try to download it
+        if not exploit_code:
+            ExploitDBAdapter.download_and_store_exploit(exploit_id)
+            exploit_code = ExploitDBAdapter.fetch_actual_exploit_code(exploit_id)
+        
+        return render_template('exploit_view.html', 
+                              metadata=metadata,
+                              exploit_code=exploit_code,
+                              exploit_id=exploit_id)
+    
+    except Exception as e:
+        logging.error(f"Error viewing exploit {exploit_id}: {e}")
+        return render_template('error.html', error_message=f"Error viewing exploit {exploit_id}: {e}")
 
 @app.route('/db_status')
 def db_status():

@@ -23,6 +23,10 @@ import zipfile
 import io
 import sqlite3
 import tempfile
+import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -39,9 +43,194 @@ CIRCL_API_BASE_URL = "https://cve.circl.lu/api"
 NIST_DATA_GOV_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
 # Constants for Exploit-DB
-EXPLOIT_DB_CSV_URL = "https://github.com/offensive-security/exploitdb/raw/master/files_exploits.csv"
-EXPLOIT_DB_ARCHIVE_URL = "https://github.com/offensive-security/exploitdb/archive/master.zip"
+EXPLOIT_DB_CSV_URL = "https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv"
+EXPLOIT_DB_ARCHIVE_URL = "https://gitlab.com/exploit-database/exploitdb/-/archive/main/exploitdb-main.zip"
 EXPLOIT_DB_CSV_FIELDS = ["id", "file", "description", "date", "author", "platform", "type", "port", "cve"]
+EXPLOIT_DB_BASE_URL = "https://www.exploit-db.com/exploits/"
+EXPLOIT_DB_RAW_URL = "https://www.exploit-db.com/raw/"
+
+# Default paths for storing exploit data
+DEFAULT_EXPLOIT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'exploit_cache.db')
+DEFAULT_EXPLOIT_FILES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'exploits')
+
+# Create exploits directory if it doesn't exist
+os.makedirs(DEFAULT_EXPLOIT_FILES_DIR, exist_ok=True)
+
+class CirclAdapter:
+    """
+    Adapter for fetching and processing CVE data from CIRCL CVE Search API.
+    CIRCL provides a comprehensive API with good search capabilities.
+    """
+    
+    @staticmethod
+    def fetch_latest_cves(limit=100):
+        """
+        Fetch the latest CVEs from the CIRCL API.
+        
+        Args:
+            limit: Maximum number of CVEs to fetch
+            
+        Returns:
+            list: List of standardized CVE items
+        """
+        try:
+            logger.info(f"Fetching latest {limit} CVEs from CIRCL API")
+            url = f"{CIRCL_API_BASE_URL}/last/{limit}"
+            response = requests.get(url)
+            response.raise_for_status()
+            
+            cve_items = []
+            circl_items = response.json()
+            
+            for circl_item in circl_items:
+                # Convert CIRCL format to our standardized format
+                cve_id = circl_item.get('id')
+                
+                # Skip items without proper CVE ID
+                if not cve_id or not cve_id.startswith('CVE-'):
+                    continue
+                
+                # Format description
+                description = circl_item.get('summary', '')
+                
+                # Extract CVSS information
+                cvss = circl_item.get('cvss', None)
+                impact = {}
+                if cvss:
+                    impact = {
+                        "baseMetricV2": {
+                            "cvssV2": {
+                                "baseScore": cvss
+                            }
+                        }
+                    }
+                
+                # Format references
+                references = []
+                for ref in circl_item.get('references', []):
+                    references.append({
+                        "url": ref,
+                        "name": ref,
+                        "source": "CIRCL"
+                    })
+                
+                # Format dates
+                published = circl_item.get('Published', '')
+                modified = circl_item.get('Modified', '')
+                
+                # Create standardized CVE item
+                cve_item = {
+                    "cve": {
+                        "CVE_data_meta": {
+                            "ID": cve_id
+                        },
+                        "description": {
+                            "description_data": [
+                                {
+                                    "lang": "en",
+                                    "value": description
+                                }
+                            ]
+                        },
+                        "references": {
+                            "reference_data": references
+                        }
+                    },
+                    "publishedDate": published,
+                    "lastModifiedDate": modified,
+                    "impact": impact
+                }
+                
+                cve_items.append(cve_item)
+            
+            logger.info(f"Fetched {len(cve_items)} CVE items from CIRCL API")
+            return cve_items
+            
+        except Exception as e:
+            logger.error(f"Error fetching latest CVEs from CIRCL API: {e}")
+            return []
+    
+    @staticmethod
+    def fetch_cve_by_id(cve_id):
+        """
+        Fetch a specific CVE by ID from the CIRCL API.
+        
+        Args:
+            cve_id: The CVE ID to fetch
+            
+        Returns:
+            dict: Standardized CVE item or None if not found
+        """
+        try:
+            logger.info(f"Fetching CVE {cve_id} from CIRCL API")
+            url = f"{CIRCL_API_BASE_URL}/cve/{cve_id}"
+            response = requests.get(url)
+            
+            # If not found, return None
+            if response.status_code == 404:
+                logger.warning(f"CVE {cve_id} not found in CIRCL API")
+                return None
+            
+            response.raise_for_status()
+            circl_item = response.json()
+            
+            # Convert CIRCL format to our standardized format
+            # Format description
+            description = circl_item.get('summary', '')
+            
+            # Extract CVSS information
+            cvss = circl_item.get('cvss', None)
+            impact = {}
+            if cvss:
+                impact = {
+                    "baseMetricV2": {
+                        "cvssV2": {
+                            "baseScore": cvss
+                        }
+                    }
+                }
+            
+            # Format references
+            references = []
+            for ref in circl_item.get('references', []):
+                references.append({
+                    "url": ref,
+                    "name": ref,
+                    "source": "CIRCL"
+                })
+            
+            # Format dates
+            published = circl_item.get('Published', '')
+            modified = circl_item.get('Modified', '')
+            
+            # Create standardized CVE item
+            cve_item = {
+                "cve": {
+                    "CVE_data_meta": {
+                        "ID": cve_id
+                    },
+                    "description": {
+                        "description_data": [
+                            {
+                                "lang": "en",
+                                "value": description
+                            }
+                        ]
+                    },
+                    "references": {
+                        "reference_data": references
+                    }
+                },
+                "publishedDate": published,
+                "lastModifiedDate": modified,
+                "impact": impact
+            }
+            
+            return cve_item
+            
+        except Exception as e:
+            logger.error(f"Error fetching CVE {cve_id} from CIRCL API: {e}")
+            return None
 
 class ExploitDBAdapter:
     """
@@ -128,8 +317,8 @@ class ExploitDBAdapter:
                 zip_file = zipfile.ZipFile(io.BytesIO(response.content))
                 zip_file.extractall(temp_dir)
                 
-                # Base directory after extraction (usually "exploitdb-master")
-                base_dir = os.path.join(temp_dir, "exploitdb-master")
+                # Base directory after extraction (usually "exploitdb-main")
+                base_dir = os.path.join(temp_dir, "exploitdb-main")
                 
                 # Get CSV data to map exploit IDs to file paths
                 csv_path = os.path.join(base_dir, "files_exploits.csv")
@@ -164,93 +353,85 @@ class ExploitDBAdapter:
             return {}
     
     @staticmethod
-    def create_standardized_cve_items(exploit_entries):
+    def download_and_store_exploit(exploit_id):
         """
-        Convert Exploit-DB entries to our standardized CVE item format.
+        Download and store the exploit code for a given exploit ID locally.
         
         Args:
-            exploit_entries: List of exploit entries from Exploit-DB
+            exploit_id: The Exploit-DB ID
             
         Returns:
-            list: List of CVE items in our standard format, enriched with exploit information
+            str: Path to the stored exploit file or None if failed
         """
         try:
-            # Group exploits by CVE ID
-            cve_to_exploits = {}
-            for entry in exploit_entries:
-                cve_id = entry.get('cve_id')
-                if not cve_id:
-                    continue
+            # Check if already exists in filesystem
+            exploit_file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+            if os.path.exists(exploit_file_path):
+                logger.info(f"Exploit code for ID {exploit_id} already exists at {exploit_file_path}")
+                return exploit_file_path
                 
-                if cve_id not in cve_to_exploits:
-                    cve_to_exploits[cve_id] = []
-                
-                cve_to_exploits[cve_id].append(entry)
+            url = f"{EXPLOIT_DB_RAW_URL}{exploit_id}"
+            logger.info(f"Downloading exploit code from {url}")
+            response = requests.get(url)
+            response.raise_for_status()
             
-            # Create standardized CVE items
-            cve_items = []
-            for cve_id, exploits in cve_to_exploits.items():
-                # Get the most recent exploit for the main description
-                most_recent_exploit = max(exploits, key=lambda x: x.get('date', ''))
-                
-                # Create a standardized CVE item
-                cve_item = {
-                    "cve": {
-                        "CVE_data_meta": {
-                            "ID": cve_id
-                        },
-                        "description": {
-                            "description_data": [
-                                {
-                                    "lang": "en",
-                                    "value": most_recent_exploit.get('description', '')
-                                }
-                            ]
-                        },
-                        "references": {
-                            "reference_data": []
-                        },
-                        "exploit_data": [] # Add exploit data as a new field
-                    },
-                    "publishedDate": most_recent_exploit.get('date'),
-                    "lastModifiedDate": most_recent_exploit.get('date'),
-                    "impact": {},
-                    "has_exploit": True
-                }
-                
-                # Add all exploits for this CVE
-                for exploit in exploits:
-                    exploit_data = {
-                        "exploit_id": exploit.get('exploit_id'),
-                        "file_path": exploit.get('file_path'),
-                        "description": exploit.get('description'),
-                        "date": exploit.get('date'),
-                        "author": exploit.get('author'),
-                        "platform": exploit.get('platform'),
-                        "type": exploit.get('type'),
-                        "source": "Exploit-DB"
-                    }
-                    cve_item["cve"]["exploit_data"].append(exploit_data)
-                    
-                    # Add a reference to Exploit-DB
-                    exploit_id = exploit.get('exploit_id')
-                    if exploit_id:
-                        cve_item["cve"]["references"]["reference_data"].append({
-                            "url": f"https://www.exploit-db.com/exploits/{exploit_id}",
-                            "name": f"Exploit-DB-{exploit_id}",
-                            "source": "Exploit-DB",
-                            "tags": ["Exploit", "PoC"]
-                        })
-                
-                cve_items.append(cve_item)
+            # Save the exploit code to a file
+            with open(exploit_file_path, 'w', encoding='utf-8', errors='ignore') as exploit_file:
+                exploit_file.write(response.text)
             
-            logger.info(f"Created {len(cve_items)} standardized CVE items from Exploit-DB data")
-            return cve_items
+            # Also update the SQLite database
+            ExploitDBAdapter.update_exploit_db(exploit_id, response.text)
+            
+            logger.info(f"Stored exploit code for ID {exploit_id} at {exploit_file_path}")
+            return exploit_file_path
             
         except Exception as e:
-            logger.error(f"Error creating standardized CVE items from Exploit-DB data: {e}")
-            return []
+            logger.error(f"Error downloading or storing exploit code for ID {exploit_id}: {e}")
+            return None
     
+    @staticmethod
+    def download_and_store_exploits_bulk(exploit_ids, max_workers=10):
+        """
+        Download and store multiple exploits in bulk using threading.
+        
+        Args:
+            exploit_ids: List of Exploit-DB IDs
+            max_workers: Maximum number of concurrent downloads
+            
+        Returns:
+            dict: Mapping of exploit IDs to their stored file paths
+        """
+        exploit_file_map = {}
+        exploit_ids_to_download = []
+        
+        # First check which exploits are already downloaded
+        for exploit_id in exploit_ids:
+            exploit_file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+            if os.path.exists(exploit_file_path):
+                exploit_file_map[exploit_id] = exploit_file_path
+            else:
+                exploit_ids_to_download.append(exploit_id)
+        
+        logger.info(f"Found {len(exploit_file_map)} exploits already downloaded, will download {len(exploit_ids_to_download)} more")
+        
+        # Download exploits in parallel
+        if exploit_ids_to_download:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_exploit_id = {executor.submit(ExploitDBAdapter.download_and_store_exploit, exploit_id): exploit_id 
+                                      for exploit_id in exploit_ids_to_download}
+                
+                for future in as_completed(future_to_exploit_id):
+                    exploit_id = future_to_exploit_id[future]
+                    try:
+                        exploit_file_path = future.result()
+                        if exploit_file_path:
+                            exploit_file_map[exploit_id] = exploit_file_path
+                    except Exception as e:
+                        logger.error(f"Error processing exploit ID {exploit_id}: {e}")
+        
+        logger.info(f"Downloaded and stored {len(exploit_file_map)} exploits in bulk")
+        return exploit_file_map
+
     @staticmethod
     def fetch_cve_exploits():
         """
@@ -309,8 +490,22 @@ class ExploitDBAdapter:
                     "author": exploit.get('author'),
                     "platform": exploit.get('platform'),
                     "type": exploit.get('type'),
-                    "source": "Exploit-DB"
+                    "source": "Exploit-DB",
+                    "local_file_exists": False
                 }
+                
+                # Check if we have a local copy of this exploit
+                exploit_id = exploit.get('exploit_id')
+                if exploit_id:
+                    local_file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+                    if os.path.exists(local_file_path):
+                        exploit_data["local_file_exists"] = True
+                        exploit_data["local_file_path"] = local_file_path
+                    
+                    # If not already downloaded, try to download in the background
+                    if not exploit_data["local_file_exists"]:
+                        threading.Thread(target=ExploitDBAdapter.download_and_store_exploit, args=(exploit_id,), daemon=True).start()
+                
                 cve_item['cve']['exploit_data'].append(exploit_data)
             
             # Add a flag indicating that this CVE has exploits
@@ -325,13 +520,13 @@ class ExploitDBAdapter:
                 if exploit_id:
                     # Check if reference already exists to avoid duplicates
                     reference_exists = any(
-                        ref.get('url') == f"https://www.exploit-db.com/exploits/{exploit_id}"
+                        ref.get('url') == f"{EXPLOIT_DB_BASE_URL}{exploit_id}"
                         for ref in cve_item['cve']['references']['reference_data']
                     )
                     
                     if not reference_exists:
                         cve_item['cve']['references']['reference_data'].append({
-                            "url": f"https://www.exploit-db.com/exploits/{exploit_id}",
+                            "url": f"{EXPLOIT_DB_BASE_URL}{exploit_id}",
                             "name": f"Exploit-DB-{exploit_id}",
                             "source": "Exploit-DB",
                             "tags": ["Exploit", "PoC"]
@@ -343,162 +538,572 @@ class ExploitDBAdapter:
             logger.error(f"Error enriching CVE item with exploit data: {e}")
             return cve_item
 
+    @staticmethod
+    def init_exploit_db():
+        """
+        Initialize the database for storing exploit code and metadata.
+        """
+        try:
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Create tables if they don't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS exploit_code (
+                    id TEXT PRIMARY KEY,
+                    code TEXT,
+                    fetch_date TEXT,
+                    file_path TEXT
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS exploit_metadata (
+                    id TEXT PRIMARY KEY,
+                    cve_id TEXT,
+                    description TEXT,
+                    date TEXT,
+                    author TEXT,
+                    platform TEXT,
+                    type TEXT,
+                    file_path TEXT,
+                    download_status INTEGER DEFAULT 0,
+                    FOREIGN KEY (id) REFERENCES exploit_code(id)
+                )
+            ''')
+            
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_exploit_metadata_cve_id ON exploit_metadata(cve_id)')
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Initialized exploit database at {db_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error initializing exploit database: {e}")
+            return False
+    
+    @staticmethod
+    def update_exploit_db(exploit_id, code, metadata=None):
+        """
+        Update the exploit database with code and metadata.
+        
+        Args:
+            exploit_id: The Exploit-DB ID
+            code: The exploit code
+            metadata: Additional metadata about the exploit
+            
+        Returns:
+            bool: Success indicator
+        """
+        try:
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+            
+            # Initialize DB if needed
+            if not os.path.exists(db_path):
+                ExploitDBAdapter.init_exploit_db()
+            
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Insert or update exploit code
+            cursor.execute(
+                "INSERT OR REPLACE INTO exploit_code (id, code, fetch_date, file_path) VALUES (?, ?, ?, ?)",
+                (exploit_id, code, datetime.now().isoformat(), file_path)
+            )
+            
+            # Insert or update metadata if provided
+            if metadata:
+                cursor.execute(
+                    """INSERT OR REPLACE INTO exploit_metadata 
+                       (id, cve_id, description, date, author, platform, type, file_path, download_status) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
+                    (
+                        exploit_id,
+                        metadata.get('cve_id', ''),
+                        metadata.get('description', ''),
+                        metadata.get('date', ''),
+                        metadata.get('author', ''),
+                        metadata.get('platform', ''),
+                        metadata.get('type', ''),
+                        metadata.get('file_path', file_path)
+                    )
+                )
+            else:
+                # Just mark as downloaded if no metadata
+                cursor.execute(
+                    """INSERT OR REPLACE INTO exploit_metadata 
+                       (id, file_path, download_status) 
+                       VALUES (?, ?, 1)
+                       ON CONFLICT(id) DO UPDATE SET download_status = 1, file_path = ?""",
+                    (exploit_id, file_path, file_path)
+                )
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Updated exploit database with exploit ID {exploit_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating exploit database: {e}")
+            return False
+    
+    @staticmethod
+    def import_all_exploit_metadata():
+        """
+        Import all exploit metadata from Exploit-DB CSV into our database.
+        
+        Returns:
+            int: Count of imported metadata records
+        """
+        try:
+            # Make sure the database is initialized
+            ExploitDBAdapter.init_exploit_db()
+            
+            # Fetch all exploit metadata from CSV
+            logger.info("Importing all exploit metadata from Exploit-DB CSV")
+            response = requests.get(EXPLOIT_DB_CSV_URL)
+            response.raise_for_status()
+            
+            csv_data = response.text
+            reader = csv.DictReader(StringIO(csv_data))
+            
+            # Connect to the database
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Process and import each exploit record
+            count = 0
+            for row in reader:
+                exploit_id = row.get('id', '')
+                if not exploit_id:
+                    continue
+                
+                # Process CVE field
+                cve_field = row.get('cve', '')
+                cve_id = None
+                if cve_field and cve_field != '0':
+                    # Handle both "CVE-YYYY-XXXXX" format and "YYYY-XXXXX" format
+                    match = re.search(r'(?:CVE-)?(\d{4}-\d+)', cve_field)
+                    if match:
+                        cve_id = match.group(0)
+                        if not cve_id.startswith('CVE-'):
+                            cve_id = f"CVE-{cve_id}"
+                
+                file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+                download_status = 1 if os.path.exists(file_path) else 0
+                
+                # Insert metadata into database
+                cursor.execute(
+                    """INSERT OR REPLACE INTO exploit_metadata 
+                       (id, cve_id, description, date, author, platform, type, file_path, download_status) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        exploit_id,
+                        cve_id or '',
+                        row.get('description', ''),
+                        row.get('date', ''),
+                        row.get('author', ''),
+                        row.get('platform', ''),
+                        row.get('type', ''),
+                        row.get('file', ''),
+                        download_status
+                    )
+                )
+                
+                count += 1
+                
+                # Commit periodically to avoid memory issues
+                if count % 1000 == 0:
+                    conn.commit()
+                    logger.info(f"Imported {count} exploit metadata records so far")
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Imported {count} exploit metadata records in total")
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error importing exploit metadata: {e}")
+            return 0
+    
+    @staticmethod
+    def download_all_exploits(limit=None, filter_cve_only=True):
+        """
+        Download all exploit code from Exploit-DB.
+        
+        Args:
+            limit: Optional limit on number of exploits to download
+            filter_cve_only: Whether to only download exploits with CVE IDs
+            
+        Returns:
+            int: Number of exploits downloaded
+        """
+        try:
+            # Make sure the database is initialized
+            ExploitDBAdapter.init_exploit_db()
+            
+            # Import metadata if it's not already in the database
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM exploit_metadata")
+            metadata_count = cursor.fetchone()[0]
+            
+            if metadata_count == 0:
+                logger.info("No exploit metadata found in database. Importing...")
+                ExploitDBAdapter.import_all_exploit_metadata()
+            
+            # Query for exploit IDs to download
+            query = "SELECT id FROM exploit_metadata WHERE download_status = 0"
+            params = []
+            
+            if filter_cve_only:
+                query += " AND cve_id != ''"
+            
+            if limit:
+                query += " LIMIT ?"
+                params.append(limit)
+            
+            cursor.execute(query, params)
+            exploit_ids = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            
+            if not exploit_ids:
+                logger.info("No new exploits to download")
+                return 0
+            
+            logger.info(f"Downloading {len(exploit_ids)} exploits from Exploit-DB")
+            
+            # Download exploits in bulk
+            exploit_file_map = ExploitDBAdapter.download_and_store_exploits_bulk(exploit_ids)
+            
+            logger.info(f"Successfully downloaded {len(exploit_file_map)} exploits")
+            return len(exploit_file_map)
+            
+        except Exception as e:
+            logger.error(f"Error downloading all exploits: {e}")
+            return 0
+    
+    @staticmethod
+    def get_locally_available_exploits():
+        """
+        Get a list of exploit IDs that are available locally.
+        
+        Returns:
+            list: List of exploit IDs that have been downloaded
+        """
+        try:
+            # Check for exploits in filesystem
+            file_exploit_ids = []
+            if os.path.exists(DEFAULT_EXPLOIT_FILES_DIR):
+                file_exploit_ids = [f.stem for f in Path(DEFAULT_EXPLOIT_FILES_DIR).glob('*.txt')]
+            
+            # Check for exploits in database
+            db_exploit_ids = []
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            if os.path.exists(db_path):
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT id FROM exploit_code")
+                db_exploit_ids = [row[0] for row in cursor.fetchall()]
+                conn.close()
+            
+            # Combine and de-duplicate
+            all_exploit_ids = list(set(file_exploit_ids + db_exploit_ids))
+            logger.info(f"Found {len(all_exploit_ids)} locally available exploits")
+            return all_exploit_ids
+            
+        except Exception as e:
+            logger.error(f"Error getting locally available exploits: {e}")
+            return []
+    
+    @staticmethod
+    def get_exploits_for_cve(cve_id):
+        """
+        Get all exploits associated with a specific CVE ID.
+        
+        Args:
+            cve_id: The CVE ID
+            
+        Returns:
+            list: List of exploit metadata and file paths
+        """
+        if not cve_id:
+            return []
+        
+        try:
+            # Convert to standard format if needed
+            if not cve_id.startswith('CVE-'):
+                cve_id = f"CVE-{cve_id}"
+            
+            # Query the database for exploits
+            db_path = DEFAULT_EXPLOIT_DB_PATH
+            if not os.path.exists(db_path):
+                ExploitDBAdapter.init_exploit_db()
+                ExploitDBAdapter.import_all_exploit_metadata()
+            
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT m.id, m.description, m.date, m.author, m.platform, m.type, m.file_path, m.download_status, c.file_path
+                FROM exploit_metadata m
+                LEFT JOIN exploit_code c ON m.id = c.id
+                WHERE m.cve_id LIKE ?
+            """, (f"%{cve_id}%",))
+            
+            results = cursor.fetchall()
+            conn.close()
+            
+            exploits = []
+            for row in results:
+                exploit_id = row[0]
+                local_file_path = row[8] if row[8] else None
+                download_status = row[7]
+                
+                if not local_file_path and download_status == 1:
+                    # If marked as downloaded but no file path in exploit_code,
+                    # check if file exists in filesystem
+                    file_path = os.path.join(DEFAULT_EXPLOIT_FILES_DIR, f"{exploit_id}.txt")
+                    if os.path.exists(file_path):
+                        local_file_path = file_path
+                
+                exploits.append({
+                    'exploit_id': exploit_id,
+                    'description': row[1],
+                    'date': row[2],
+                    'author': row[3],
+                    'platform': row[4],
+                    'type': row[5],
+                    'original_file_path': row[6],
+                    'downloaded': download_status == 1,
+                    'local_file_path': local_file_path,
+                    'url': f"{EXPLOIT_DB_BASE_URL}{exploit_id}"
+                })
+            
+            logger.info(f"Found {len(exploits)} exploits for CVE {cve_id}")
+            return exploits
+            
+        except Exception as e:
+            logger.error(f"Error getting exploits for CVE {cve_id}: {e}")
+            return []
+            
+    @staticmethod
+    def create_standardized_cve_items(exploit_entries):
+        """
+        Convert exploit entries to standardized CVE items.
+        
+        Args:
+            exploit_entries: List of exploit entries from Exploit-DB CSV
+            
+        Returns:
+            list: List of standardized CVE items with exploit data
+        """
+        cve_items = []
+        for exploit in exploit_entries:
+            cve_id = exploit.get('cve_id')
+            if not cve_id:
+                continue
+            
+            cve_item = {
+                "cve": {
+                    "CVE_data_meta": {
+                        "ID": cve_id
+                    },
+                    "description": {
+                        "description_data": [
+                            {
+                                "lang": "en",
+                                "value": exploit.get('description', '')
+                            }
+                        ]
+                    },
+                    "references": {
+                        "reference_data": [
+                            {
+                                "url": f"{EXPLOIT_DB_BASE_URL}{exploit.get('exploit_id')}",
+                                "name": f"Exploit-DB-{exploit.get('exploit_id')}",
+                                "source": "Exploit-DB",
+                                "tags": ["Exploit", "PoC"]
+                            }
+                        ]
+                    }
+                },
+                "publishedDate": exploit.get('date', ''),
+                "lastModifiedDate": exploit.get('date', ''),
+                "impact": {},
+                "has_exploit": True
+            }
+            
+            cve_items.append(cve_item)
+        
+        return cve_items
+
 class MitreAdapter:
     """
-    Adapter for fetching and processing historical CVE data from MITRE.
+    Adapter for fetching and processing CVE data from MITRE.
+    Focuses on historical CVE data from 1992-2002.
     """
-
+    
     @staticmethod
     def fetch_historical_data_csv():
         """
-        Fetch historical CVE data from MITRE's CSV file.
-
+        Fetch and parse historical CVE data from MITRE's CSV format.
+        
         Returns:
-            list: List of CVE items from the CSV source.
+            list: List of standardized CVE items
         """
-        logger.info(f"Fetching historical CVE data from MITRE CSV: {MITRE_CVE_HISTORICAL_URL}")
-        cve_items = []
         try:
+            logger.info(f"Fetching historical CVE data from {MITRE_CVE_HISTORICAL_URL}")
             response = requests.get(MITRE_CVE_HISTORICAL_URL)
             response.raise_for_status()
-            # MITRE CSV uses Latin-1 encoding
-            response.encoding = 'latin-1'
-            csv_data = response.text
-            # Skip header lines before the actual CSV header
-            lines = csv_data.splitlines()
-            start_line = 0
-            for i, line in enumerate(lines):
-                if line.startswith('"Name"'):
-                    start_line = i
-                    break
             
-            if start_line == 0 and not lines[0].startswith('"Name"'):
-                 logger.error("Could not find CSV header in MITRE data.")
-                 return []
-
-            csv_content = "\n".join(lines[start_line:])
-            reader = csv.DictReader(StringIO(csv_content))
-
+            csv_data = response.text
+            reader = csv.reader(StringIO(csv_data))
+            
+            # Skip header row
+            next(reader, None)
+            
+            cve_items = []
             for row in reader:
-                cve_id = row.get('Name')
-                if not cve_id or not cve_id.startswith('CVE-'):
+                if len(row) < 4:
                     continue
-
-                # Basic conversion to standardized format
+                
+                cve_id = row[0].strip()
+                status = row[1].strip() if len(row) > 1 else ""
+                description = row[2].strip() if len(row) > 2 else ""
+                
+                # Skip entries that aren't proper CVE IDs
+                if not cve_id.startswith("CVE-"):
+                    continue
+                
+                # Convert to standardized format
                 cve_item = {
                     "cve": {
-                        "CVE_data_meta": {"ID": cve_id},
+                        "CVE_data_meta": {
+                            "ID": cve_id
+                        },
                         "description": {
-                            "description_data": [{"lang": "en", "value": row.get('Description', '')}]
+                            "description_data": [
+                                {
+                                    "lang": "en",
+                                    "value": description
+                                }
+                            ]
                         },
                         "references": {
-                            "reference_data": [] # CSV format doesn't typically contain structured references
+                            "reference_data": []
                         }
                     },
-                    "publishedDate": None, # Not directly available in this CSV format
-                    "lastModifiedDate": None, # Not directly available
-                    "impact": {}, # Not available in this CSV format
-                    "source": "MITRE_CSV"
+                    "publishedDate": None,  # Historical data often lacks precise dates
+                    "lastModifiedDate": None,
+                    "impact": {}
                 }
-                # References might be embedded in description or other fields, requires complex parsing
-
+                
                 cve_items.append(cve_item)
-
-            logger.info(f"Fetched {len(cve_items)} items from MITRE CSV")
+            
+            logger.info(f"Fetched {len(cve_items)} CVE items from MITRE CSV")
             return cve_items
-
-        except requests.exceptions.RequestException as e:
-            logger.error(f"HTTP Error fetching MITRE CSV data: {e}")
-            return []
-        except csv.Error as e:
-            logger.error(f"CSV Error parsing MITRE data: {e}")
-            return []
+            
         except Exception as e:
-            logger.error(f"Unexpected error fetching or parsing MITRE CSV data: {e}")
+            logger.error(f"Error fetching historical data from MITRE CSV: {e}")
             return []
-
+    
     @staticmethod
     def fetch_historical_data_xml():
         """
-        Fetch historical CVE data from MITRE's XML file.
-        Note: MITRE's 'allitems.xml' is often deprecated or unavailable.
-              This method provides a basic structure but might need adjustments
-              if a suitable XML source is identified.
-
+        Fetch and parse historical CVE data from MITRE's XML format.
+        Generally more complete than CSV format.
+        
         Returns:
-            list: List of CVE items from the XML source.
+            list: List of standardized CVE items
         """
-        logger.warning(f"Attempting to fetch historical CVE data from MITRE XML: {MITRE_CVE_XML_URL}. This source may be deprecated.")
-        cve_items = []
         try:
-            # Add a timeout to avoid hanging indefinitely
-            response = requests.get(MITRE_CVE_XML_URL, timeout=60)
+            logger.info(f"Fetching historical CVE data from {MITRE_CVE_XML_URL}")
+            response = requests.get(MITRE_CVE_XML_URL)
             response.raise_for_status()
-            xml_content = response.content
-
-            # Parse XML (MITRE's XML structure can vary, this is a guess)
-            # It's common for large XML files to require iterative parsing
-            # For simplicity, we attempt direct parsing here.
-            root = ET.fromstring(xml_content)
-            # Namespace handling might be necessary, e.g., ns = {'cve': 'http://some.namespace/url'}
-            # Findall calls would then use ns, e.g., root.findall('.//cve:item', ns)
-
-            # Adjust XPath based on the actual structure of the XML file
-            for item_elem in root.findall('.//item'): # Example XPath
-                cve_id = item_elem.get('name') # Example attribute
-                if not cve_id or not cve_id.startswith('CVE-'):
+            
+            # Parse XML
+            root = ET.fromstring(response.content)
+            
+            cve_items = []
+            for item in root.findall(".//item"):
+                cve_id = item.get("name", "")
+                
+                # Skip entries that aren't proper CVE IDs
+                if not cve_id.startswith("CVE-"):
                     continue
-
-                desc_elem = item_elem.find('.//description') # Example XPath
-                description = desc_elem.text.strip() if desc_elem is not None and desc_elem.text else 'No description available.'
-
-                refs_data = []
-                refs_container = item_elem.find('.//references') # Example XPath
-                if refs_container is not None:
-                    for ref_elem in refs_container.findall('.//reference'): # Example XPath
-                        url = ref_elem.get('url') # Example attribute
-                        source = ref_elem.get('source') # Example attribute
-                        if url:
-                            refs_data.append({
-                                "url": url,
-                                "name": url, # Or use source if available
-                                "source": source or "MITRE",
-                                "tags": []
+                
+                # Extract description and other data
+                description = ""
+                desc_elem = item.find("desc")
+                if desc_elem is not None and desc_elem.text:
+                    description = desc_elem.text.strip()
+                
+                # Extract published date if available
+                published_date = None
+                date_elem = item.find("date")
+                if date_elem is not None and date_elem.text:
+                    try:
+                        date_str = date_elem.text.strip()
+                        # Convert to ISO format
+                        published_date = datetime.strptime(date_str, "%Y-%m-%d").isoformat() + "Z"
+                    except Exception:
+                        pass
+                
+                # Extract references
+                references = []
+                refs_elem = item.find("refs")
+                if refs_elem is not None:
+                    for ref in refs_elem.findall("ref"):
+                        ref_url = ref.get("url", "")
+                        ref_source = ref.get("source", "")
+                        if ref_url:
+                            references.append({
+                                "url": ref_url,
+                                "name": ref_source,
+                                "source": "MITRE"
                             })
-
-                # Basic conversion to standardized format
+                
+                # Convert to standardized format
                 cve_item = {
                     "cve": {
-                        "CVE_data_meta": {"ID": cve_id},
+                        "CVE_data_meta": {
+                            "ID": cve_id
+                        },
                         "description": {
-                            "description_data": [{"lang": "en", "value": description}]
+                            "description_data": [
+                                {
+                                    "lang": "en",
+                                    "value": description
+                                }
+                            ]
                         },
                         "references": {
-                            "reference_data": refs_data
+                            "reference_data": references
                         }
                     },
-                    "publishedDate": item_elem.get('published'), # Example attribute
-                    "lastModifiedDate": item_elem.get('modified'), # Example attribute
-                    "impact": {}, # Extract CVSS if available in XML
-                    "source": "MITRE_XML"
+                    "publishedDate": published_date,
+                    "lastModifiedDate": published_date,
+                    "impact": {}
                 }
+                
                 cve_items.append(cve_item)
-
-            logger.info(f"Fetched {len(cve_items)} items from MITRE XML")
+            
+            logger.info(f"Fetched {len(cve_items)} CVE items from MITRE XML")
             return cve_items
-
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout occurred while fetching MITRE XML data from {MITRE_CVE_XML_URL}")
-            return []
-        except requests.exceptions.RequestException as e:
-            logger.error(f"HTTP Error fetching MITRE XML data: {e}")
-            # MITRE XML might return 404 or other errors if deprecated
-            return []
-        except ET.ParseError as e:
-            logger.error(f"Error parsing MITRE XML data: {e}")
-            return []
+            
         except Exception as e:
-            logger.error(f"Unexpected error fetching or processing MITRE XML data: {e}")
+            logger.error(f"Error fetching historical data from MITRE XML: {e}")
             return []
 
 def fetch_historical_cve_data():
