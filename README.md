@@ -25,7 +25,7 @@ NVD CVE Database Explorer is a powerful web application for managing, analyzing,
 
 ## Statistical Analysis
 
-![Dashboard](screenshots/dashboard.png)
+
 
 ## Installation
 
@@ -72,10 +72,6 @@ cve_details = nvd.get_cve("CVE-2021-44228")
 # Search for vulnerabilities for specific products
 apache_vulns = nvd.search_by_product("apache", "log4j")
 ```
-
-## Special Features
-
-![Monthly Summaries](screenshots/monthly_sum.png)
 
 ### Vendor Analyses
 Detailed insights into the security situation of specific vendors:
