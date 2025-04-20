@@ -744,49 +744,89 @@ def db_status():
 @app.route('/vendor_analysis')
 def vendor_analysis():
     """
-    Route to display an analysis of CVEs by vendor.
-    Fetches vendor data (e.g., CVE counts per vendor) and renders the vendor analysis template.
+    Route to display an analysis of CVEs by vendor, including severity breakdown.
+    Fetches vendor data and renders the vendor analysis template.
     """
+    top_n = 30 # Number of top vendors to display
+    vendor_details = {}
+
     try:
-        # --- TODO: Replace placeholder data with actual database query ---
         engine = create_local_cve_db()
         session = get_session(engine)
 
         if CVE_Model is None:
              return render_template('error.html', error_message="Database model not initialized.")
 
-        # Example: Query vendors based on CPE data (this can be complex and slow)
-        # This is a simplified example; real vendor extraction from CPE is non-trivial.
-        # You might need a dedicated vendor table or better parsing logic.
-        all_cpes = session.query(CVE_Model.cpe_affected).filter(CVE_Model.cpe_affected != '').all()
-        vendor_counts = {}
-        for cpe_string_tuple in all_cpes:
-            if cpe_string_tuple[0]:
-                cpes = cpe_string_tuple[0].split(',')
-                vendors_in_cve = set()  # Track vendors per CVE to avoid double counting
+        # Query necessary data: cpe_affected and severity for all relevant CVEs
+        # Optimization: Query only necessary columns
+        cve_data_query = session.query(CVE_Model.cpe_affected, CVE_Model.severity)\
+                                .filter(CVE_Model.cpe_affected != '', CVE_Model.cpe_affected.isnot(None))\
+                                .all()
+
+        # Process data to aggregate vendor counts and severity distributions
+        for cpe_string_tuple, severity in cve_data_query:
+            if cpe_string_tuple:
+                cpes = cpe_string_tuple.split(',')
+                vendors_in_cve = set()
                 for cpe in cpes:
-                    # Basic CPE parsing: cpe:2.3:a:vendor:product:version:...
                     parts = cpe.split(':')
-                    if len(parts) >= 4:
-                        vendor = parts[3]
+                    # cpe:2.3:a:vendor:product:version:...
+                    if len(parts) >= 4 and parts[0] == 'cpe' and parts[1] == '2.3':
+                        vendor = parts[3].replace('_', ' ').title()
                         vendors_in_cve.add(vendor)
+
+                processed_severity = (severity or 'UNKNOWN').upper()
+
                 for vendor in vendors_in_cve:
-                     vendor_counts[vendor] = vendor_counts.get(vendor, 0) + 1
+                    if vendor not in vendor_details:
+                        vendor_details[vendor] = {
+                            'count': 0,
+                            'severities': {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+                        }
+                    vendor_details[vendor]['count'] += 1
+                    if processed_severity in vendor_details[vendor]['severities']:
+                        vendor_details[vendor]['severities'][processed_severity] += 1
 
-        # Limit to top N vendors for performance/display
-        top_n = 50
-        sorted_vendors = dict(sorted(vendor_counts.items(), key=lambda item: item[1], reverse=True)[:top_n])
+        # Sort vendors by total CVE count
+        sorted_vendors_list = sorted(vendor_details.items(), key=lambda item: item[1]['count'], reverse=True)
 
-        session.close()  # Close session after query
+        # Get top N vendors
+        top_vendors_list = sorted_vendors_list[:top_n]
+        top_vendors_dict = dict(top_vendors_list)
 
-        return render_template('vendor_analysis.html', vendors=sorted_vendors)
+        session.close()
+
+        # Prepare data for Chart.js (Top N Vendors by Count)
+        chart_labels = [v[0] for v in top_vendors_list] # Vendor names
+        chart_data = [v[1]['count'] for v in top_vendors_list] # Total counts
+        chart_json = json.dumps({
+            'labels': chart_labels,
+            'datasets': [{
+                'label': 'Total CVEs',
+                'data': chart_data,
+                'backgroundColor': 'rgba(54, 162, 235, 0.6)', # Example color
+                'borderColor': 'rgba(54, 162, 235, 1)',
+                'borderWidth': 1
+            }]
+        })
+
+        return render_template('vendor_analysis.html',
+                               vendors=top_vendors_dict, # Pass the dict of top vendors
+                               chart_json=chart_json,
+                               top_n=top_n)
     except Exception as e:
-        # Log the error for debugging purposes
         logging.error(f"Error in /vendor_analysis route: {e}")
-        # Consider using Flask's logging for production: app.logger.error(f"Error in /vendor_analysis route: {e}")
-
-        # Render a user-friendly error page
+        # Log the full traceback for debugging
+        import traceback
+        logging.error(traceback.format_exc())
         return render_template('error.html', error_message="An error occurred while loading vendor analysis data. Please try again later."), 500
+
+# Add a temporary dummy route to test the BuildError
+@app.route('/top_vendors_placeholder')
+def top_vendors():
+    # This is a placeholder. Replace with actual logic or remove if not needed.
+    # You might want to return a simple template or just text.
+    return "Top Vendors Page (Placeholder)", 200
 
 # Run the application
 if __name__ == '__main__':
