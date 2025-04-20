@@ -1,7 +1,7 @@
-/* NVD Modern Logo Styles - Professional Cybersecurity Theme */
+/* NVD DB Minimalist Professional Logo Styles - Optimized for Sidebar */
 .nvd-logo-container {
-    width: 100%;
-    height: 300px; /* Increased height from 200px to 300px */
+    width: 100%; 
+    height: 140px; /* Optimierte Höhe für die Sidebar-Header */
     margin: 0 auto;
     position: relative;
     cursor: pointer;
@@ -10,400 +10,134 @@
     align-items: center;
     justify-content: center;
     transform-origin: center;
-    padding: 10px;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    will-change: transform; /* Performance optimization */
+    padding: 0; /* Kein Padding, um maximalen Platz zu nutzen */
+    transition: transform 0.2s ease;
 }
 
 .nvd-logo-container:hover {
-    transform: scale(1.08); /* Increased scale effect on hover */
+    transform: scale(1.03); /* Subtiler Hover-Effekt */
 }
 
 .nvd-logo-svg {
     width: 100%;
     height: 100%;
     overflow: visible;
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.2)); /* Enhanced shadow */
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.15));
 }
 
-/* Hexagonal shield styling - enhanced professional look */
-.nvd-logo-hex-shield {
-    fill: #152238; /* Darker base for more depth */
-    stroke: #1d85fd; /* Brighter blue for better visibility */
-    stroke-width: 2.2; /* Thicker stroke */
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
-    transition: all 0.3s ease;
-}
-
-.nvd-logo-active .nvd-logo-hex-shield {
-    fill: #192235;
-    stroke: #2b9fff; /* Even brighter active state */
-    stroke-width: 2.5;
-    filter: drop-shadow(0 8px 20px rgba(13, 110, 253, 0.5));
-}
-
-/* Inner hexagon styling - more professional gradients */
-.nvd-logo-inner-hex {
-    fill: #243760;
-    stroke: rgba(255, 255, 255, 0.15); /* Slightly more visible inner hex border */
-    stroke-width: 1.2;
-    transition: all 0.3s ease;
-}
-
-.nvd-logo-active .nvd-logo-inner-hex {
-    fill: #2c4b82;
-    stroke: rgba(255, 255, 255, 0.3);
-    filter: drop-shadow(0 0 8px rgba(13, 110, 253, 0.3));
-}
-
-/* Shield symbol styling - enhanced with professional colors */
-.nvd-logo-shield-symbol {
-    fill: #1a88fd; /* Adjusted blue for better contrast */
-    transition: all 0.3s ease;
-}
-
-.nvd-logo-active .nvd-logo-shield-symbol {
-    fill: #2b9fff;
-    filter: drop-shadow(0 0 8px rgba(13, 110, 253, 0.6));
-}
-
-.nvd-logo-scanning .nvd-logo-shield-symbol {
-    fill: #30f8a1; /* Brighter green for scanning effect */
-    animation: scan-pulse 1.5s ease-in-out;
-}
-
-/* New center emblem styles (replacing the text) */
-.nvd-logo-center-emblem {
-    fill: #ffffff;
-    opacity: 0.95; /* Slightly more visible */
-    transition: all 0.3s ease;
-}
-
-.nvd-logo-active .nvd-logo-center-emblem {
-    fill: #ffffff;
-    opacity: 1;
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
-}
-
-.nvd-logo-scanning .nvd-logo-center-emblem {
-    fill: #e8fff5;
-    filter: drop-shadow(0 0 6px rgba(37, 240, 155, 0.7));
-    animation: emblem-pulse 1.5s ease-in-out;
-}
-
-/* New decorative scan lines for professional tech look */
-.nvd-logo-scan-line {
-    stroke: rgba(255, 255, 255, 0.2);
+/* Main hexagon outer shape */
+.nvd-logo-main-shape {
+    fill: url(#primaryGradient);
+    stroke: rgba(255, 255, 255, 0.1);
     stroke-width: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     transition: all 0.3s ease;
-    opacity: 0.7;
 }
 
-.nvd-logo-active .nvd-logo-scan-line {
+.nvd-logo-active .nvd-logo-main-shape {
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+}
+
+/* Inner hexagon layer - subtle variation */
+.nvd-logo-inner-shape {
+    fill: url(#secondaryGradient);
+    stroke: rgba(255, 255, 255, 0.05);
+    stroke-width: 0.5;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-inner-shape {
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+}
+
+/* Database styling - professional and clean */
+.nvd-logo-database-body {
+    fill: rgba(255, 255, 255, 0.15);
     stroke: rgba(255, 255, 255, 0.3);
-    stroke-width: 1.2;
+    stroke-width: 0.5;
+    transition: all 0.3s ease;
 }
 
-.nvd-logo-scanning .nvd-logo-scan-line {
-    stroke: rgba(37, 240, 155, 0.5);
-    animation: scan-line-pulse 1.5s ease-in-out infinite;
+.nvd-logo-active .nvd-logo-database-body {
+    fill: rgba(255, 255, 255, 0.2);
 }
 
-/* Circuit styling - more refined for professional look */
-.nvd-logo-circuit-line {
-    stroke: rgba(255, 255, 255, 0.25);
-    stroke-width: 1.5;
+.nvd-logo-database-top, .nvd-logo-database-segment {
+    fill: rgba(255, 255, 255, 0.15);
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 0.5;
+    transition: all 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-database-top,
+.nvd-logo-active .nvd-logo-database-segment {
+    fill: rgba(255, 255, 255, 0.2);
+}
+
+/* Data line styling - minimal */
+.nvd-logo-data-line {
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 0.75;
     fill: none;
     transition: all 0.3s ease;
-    stroke-dasharray: 50;
-    stroke-dashoffset: 50;
-    animation: dash 3s linear forwards;
 }
 
-.nvd-logo-active .nvd-logo-circuit-line {
-    stroke: rgba(255, 255, 255, 0.5);
+.nvd-logo-active .nvd-logo-data-line {
+    stroke: rgba(255, 255, 255, 0.6);
 }
 
-.nvd-logo-circuit-node {
-    fill: rgba(255, 255, 255, 0.3);
+/* Shield symbol - representing security */
+.nvd-logo-shield {
+    fill: rgba(255, 255, 255, 0.08);
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 0.5;
     transition: all 0.3s ease;
 }
 
-.nvd-logo-active .nvd-logo-circuit-node {
-    fill: rgba(255, 255, 255, 0.6);
+.nvd-logo-active .nvd-logo-shield {
+    fill: rgba(255, 255, 255, 0.12);
+    stroke: rgba(255, 255, 255, 0.4);
 }
 
-.nvd-logo-data-active {
-    stroke: #25f09b !important;
-    stroke-width: 2.5 !important;
-    filter: drop-shadow(0 0 4px rgba(37, 240, 155, 0.7));
-    animation: data-pulse 0.7s ease-out !important;
+/* Logo initialization animation - subtle fade in */
+.nvd-logo-ready {
+    animation: logo-appear 0.6s ease forwards;
 }
 
-/* Interactive data points - enhanced for professional clarity */
-.nvd-logo-data-point {
-    fill: rgba(255, 255, 255, 0.5);
-    opacity: 0.6;
-    transition: all 0.3s ease;
-    animation: blink 6s infinite;
-}
-
-.nvd-logo-active .nvd-logo-data-point {
-    fill: rgba(255, 255, 255, 0.8);
-    opacity: 0.8;
-}
-
-.nvd-logo-point-active {
-    fill: #0d9dfd !important;
-    opacity: 1 !important;
-    r: 3 !important;
-    filter: drop-shadow(0 0 4px rgba(13, 157, 253, 0.8));
-}
-
-/* Pulse animation styling - refined for professional look */
-.nvd-logo-pulse {
-    fill: transparent;
-    stroke: rgba(13, 110, 253, 0.5);
-    stroke-width: 1.5;
-    transform-origin: center;
-    opacity: 0;
-    animation: pulse-ring 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-}
-
-.nvd-logo-pulse-container {
-    display: block;
-    opacity: 1;
-}
-
-/* Ensure pulse animation works on all pages, not just active state */
-.pulse-1 {
-    animation-delay: 0s;
-}
-
-.pulse-2 {
-    animation-delay: 0.7s;
-}
-
-.pulse-3 {
-    animation-delay: 1.4s;
-}
-
-/* Specific styling for update page */
-.nvd-logo-update .nvd-logo-pulse {
-    stroke: rgba(48, 248, 161, 0.6); /* Grünlicher Ton für Update-Animation */
-}
-
-/* Ensure consistent sizing across all pages */
-.sidebar .nvd-logo-container {
-    max-width: 100%;
-    width: 100%;
-    height: 300px; /* Increased to match main logo height */
-}
-
-/* Ensure monthly summary style on all pages */
-.nvd-logo-monthly .nvd-logo-hex-shield,
-.nvd-logo-hex-shield {
-    fill: #152238; /* Consistent with our new color scheme */
-    stroke: #1d85fd;
-    stroke-width: 2.2;
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
-}
-
-/* Add a dynamic page load animation */
 @keyframes logo-appear {
     0% {
         opacity: 0;
-        transform: scale(0.8) translateY(10px);
+        transform: scale(0.95);
     }
     100% {
         opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.nvd-logo-ready {
-    animation: logo-appear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-/* New animation for emblem pulse */
-@keyframes emblem-pulse {
-    0%, 100% {
-        opacity: 0.9;
-        filter: drop-shadow(0 0 3px rgba(37, 240, 155, 0.6));
-    }
-    50% {
-        opacity: 1;
-        filter: drop-shadow(0 0 8px rgba(37, 240, 155, 0.9));
-    }
-}
-
-/* New animation for scan lines */
-@keyframes scan-line-pulse {
-    0%, 100% {
-        opacity: 0.5;
-        stroke-width: 1;
-    }
-    50% {
-        opacity: 0.8;
-        stroke-width: 1.5;
-    }
-}
-
-/* Modernized animations with better performance */
-@keyframes pulse-ring {
-    0% {
-        r: 0;
-        opacity: 0.8;
-    }
-    100% {
-        r: 45; /* Increased radius for more dramatic effect */
-        opacity: 0;
-    }
-}
-
-@keyframes dash {
-    to {
-        stroke-dashoffset: 0;
-    }
-}
-
-@keyframes scan-pulse {
-    0%, 100% {
-        fill: #30f8a1; /* Brighter green */
-        filter: drop-shadow(0 0 10px rgba(48, 248, 161, 0.7));
         transform: scale(1);
     }
-    50% {
-        fill: #0df0e0;
-        filter: drop-shadow(0 0 18px rgba(13, 240, 224, 0.9));
-        transform: scale(1.02); /* Subtle scale for pulsing effect */
-    }
 }
 
-@keyframes data-pulse {
-    0% {
-        opacity: 1;
-        transform: scale(1.6);
-        filter: drop-shadow(0 0 8px rgba(13, 157, 253, 0.9));
-    }
-    100% {
-        opacity: 0.3;
-        transform: scale(1);
-        filter: none;
-    }
-}
-
-@keyframes blink {
-    0%, 100% {
-        opacity: 0.7;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.3;
-        transform: scale(0.8);
-    }
-}
-
-/* Force consistent styling on responsive screens with improved visibility */
+/* Responsive adjustments for sidebar */
 @media (max-width: 992px) {
     .nvd-logo-container {
-        width: 100%;
-        height: 260px; /* Increased from 190px for tablets */
+        height: 130px;
     }
 }
 
 @media (max-width: 768px) {
     .nvd-logo-container {
-        width: 100%;
-        height: 240px; /* Increased from 180px for medium devices */
-    }
-    
-    .nvd-logo-hex-shield {
-        stroke-width: 2.5; /* Thicker stroke for better visibility on smaller screens */
+        height: 120px; /* Kleiner für mobile Ansicht */
     }
 }
 
 @media (max-width: 576px) {
     .nvd-logo-container {
-        width: 100%;
-        height: 220px; /* Increased from 160px for mobile devices */
-    }
-    
-    .nvd-logo-hex-shield {
-        stroke-width: 2.8; /* Even thicker stroke for mobile */
-    }
-    
-    .nvd-logo-center-emblem {
-        opacity: 1; /* Full opacity on small screens */
+        height: 110px;
     }
 }
 
-/* High-contrast and reduced motion accommodations for accessibility */
+/* Accessibility accommodations */
 @media (prefers-reduced-motion: reduce) {
-    .nvd-logo-circuit-line, 
-    .nvd-logo-data-point, 
-    .nvd-logo-pulse {
-        animation: none !important;
-    }
-    
-    .nvd-logo-scanning .nvd-logo-shield-symbol,
-    .nvd-logo-scanning .nvd-logo-center-emblem,
-    .nvd-logo-scanning .nvd-logo-scan-line {
+    .nvd-logo-container, .nvd-logo-active, .nvd-logo-ready {
         animation: none !important;
         transition: none !important;
-    }
-    
-    .nvd-logo-point-active {
-        animation: none !important;
-        fill: #1d85fd !important;
-    }
-}
-
-@media (prefers-contrast: more) {
-    .nvd-logo-hex-shield {
-        stroke: #1563db !important;
-        stroke-width: 3 !important;
-    }
-    
-    .nvd-logo-center-emblem {
-        fill: #ffffff !important;
-        opacity: 1 !important;
-    }
-}
-
-/* Fix for Safari and iOS */
-@supports (-webkit-touch-callout: none) {
-    .nvd-logo-svg {
-        height: 100% !important;
-        width: auto !important;
-        max-width: 100%;
-    }
-    
-    .nvd-logo-circuit-line {
-        animation-duration: 2s !important;
-    }
-}
-
-/* Print media styling */
-@media print {
-    .nvd-logo-container {
-        height: 240px !important; /* Increased from 160px for print */
-    }
-    
-    .nvd-logo-circuit-line,
-    .nvd-logo-scan-line,
-    .nvd-logo-data-point {
-        animation: none !important;
-    }
-    
-    .nvd-logo-hex-shield {
-        stroke: #000 !important;
-        stroke-width: 2.5 !important;
-        fill: #fff !important;
-        filter: none !important;
-    }
-    
-    .nvd-logo-center-emblem {
-        fill: #000 !important;
     }
 }

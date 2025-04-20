@@ -1,14 +1,12 @@
-// Modified logo script with enhanced performance and animations
+// NVD DB Minimalist Professional Logo Implementation
 document.addEventListener('DOMContentLoaded', function() {
-    // Create the logo container if it doesn't exist yet
+    // Initialize the logo
     function initializeLogo() {
         const logoContainer = document.getElementById('nvd-logo-container');
         if (!logoContainer) return;
         
-        // Check if logo already exists to avoid unnecessary regeneration
+        // Check if logo already exists to avoid regeneration
         if (logoContainer.querySelector('.nvd-logo-svg')) {
-            // Just refresh animations instead of full regeneration
-            addPageSpecificAnimations();
             return;
         }
         
@@ -18,158 +16,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create SVG element with fixed dimensions
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("viewBox", "0 0 240 180"); // Fixed viewBox for consistent rendering
+        svg.setAttribute("viewBox", "0 0 240 240");
         svg.setAttribute("class", "nvd-logo-svg");
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet"); // Ensures it centers properly
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
         logoContainer.appendChild(svg);
         
-        // Create hexagonal shield (modern cybersecurity symbol)
-        const hexShield = document.createElementNS(svgNS, "path");
-        hexShield.setAttribute("class", "nvd-logo-hex-shield");
-        hexShield.setAttribute("d", "M120,30 L180,60 L180,120 L120,150 L60,120 L60,60 Z");
-        svg.appendChild(hexShield);
+        // Create gradients and filters
+        createGradients(svg, svgNS);
         
-        // Create inner hexagon
-        const innerHex = document.createElementNS(svgNS, "path");
-        innerHex.setAttribute("class", "nvd-logo-inner-hex");
-        innerHex.setAttribute("d", "M120,50 L160,70 L160,110 L120,130 L80,110 L80,70 Z");
-        svg.appendChild(innerHex);
+        // Create the main logo shape - clean hexagon
+        createLogoShape(svg, svgNS);
         
-        // Enhanced data protection symbol - more professional shield design without keyhole text
-        const shieldSymbol = document.createElementNS(svgNS, "path");
-        shieldSymbol.setAttribute("class", "nvd-logo-shield-symbol");
-        // Improved professional shield design with modern look
-        shieldSymbol.setAttribute("d", "M120,60 L148,72 L148,95 C148,115 130,125 120,125 C110,125 92,115 92,95 L92,72 Z");
-        svg.appendChild(shieldSymbol);
+        // Create the inner minimalist elements
+        createInnerElements(svg, svgNS);
         
-        // Create center emblem (replacing the text with a professional symbol)
-        const centerEmblem = document.createElementNS(svgNS, "path");
-        centerEmblem.setAttribute("class", "nvd-logo-center-emblem");
-        // Cybersecurity lock icon instead of text
-        centerEmblem.setAttribute("d", "M120,78 C113,78 108,83 108,90 L108,93 L106,93 C104,93 102,95 102,97 L102,110 C102,112 104,114 106,114 L134,114 C136,114 138,112 138,110 L138,97 C138,95 136,93 134,93 L132,93 L132,90 C132,83 127,78 120,78 Z M120,82 C124,82 128,85 128,90 L128,93 L112,93 L112,90 C112,85 116,82 120,82 Z");
-        svg.appendChild(centerEmblem);
-        
-        // Add decorative lines inside shield (enhancing professional look)
-        const decorativeLinesGroup = document.createElementNS(svgNS, "g");
-        decorativeLinesGroup.setAttribute("class", "nvd-logo-decorative-lines");
-        
-        // Horizontal security scan lines
-        for (let i = 0; i < 5; i++) {
-            const line = document.createElementNS(svgNS, "line");
-            line.setAttribute("class", "nvd-logo-scan-line");
-            line.setAttribute("x1", "100");
-            line.setAttribute("y1", 95 + (i * 5));
-            line.setAttribute("x2", "140");
-            line.setAttribute("y2", 95 + (i * 5));
-            line.style.animationDelay = `${i * 0.2}s`;
-            decorativeLinesGroup.appendChild(line);
-        }
-        
-        svg.appendChild(decorativeLinesGroup);
-        
-        // Create digital circuit pattern (enhanced)
-        const circuitGroup = document.createElementNS(svgNS, "g");
-        circuitGroup.setAttribute("class", "nvd-logo-circuit");
-        
-        // More sophisticated circuit lines for professional tech look
-        const circuitPaths = [
-            "M60,90 L45,90 L45,110 L75,110",
-            "M180,90 L195,90 L195,110 L165,110",
-            "M100,130 L100,145 L140,145 L140,130",
-            "M120,150 L120,165",
-            "M80,65 L40,65 L40,130 L70,130",
-            "M160,65 L200,65 L200,130 L170,130",
-            // Enhanced professional circuit paths
-            "M80,100 L50,100 L50,125",
-            "M160,100 L190,100 L190,125",
-            "M90,45 L90,35 L150,35 L150,45"
-        ];
-        
-        // Use document fragment for better performance
-        const circuitFragment = document.createDocumentFragment();
-        
-        circuitPaths.forEach((path, index) => {
-            const line = document.createElementNS(svgNS, "path");
-            line.setAttribute("class", `nvd-logo-circuit-line line-${index}`);
-            line.setAttribute("d", path);
-            line.style.animationDelay = `${index * 0.15}s`; // Slightly faster animation
-            circuitFragment.appendChild(line);
-        });
-        
-        circuitGroup.appendChild(circuitFragment);
-        
-        // Circuit nodes (enhanced with more points)
-        const circuitNodes = [
-            [45, 90], [45, 110], [195, 90], [195, 110],
-            [100, 145], [140, 145], [120, 165],
-            [40, 65], [40, 130], [200, 65], [200, 130],
-            [50, 100], [50, 125], [190, 100], [190, 125],
-            [90, 35], [150, 35]
-        ];
-        
-        // Use document fragment for better performance
-        const nodesFragment = document.createDocumentFragment();
-        
-        circuitNodes.forEach((coords, index) => {
-            const node = document.createElementNS(svgNS, "circle");
-            node.setAttribute("class", `nvd-logo-circuit-node node-${index}`);
-            node.setAttribute("cx", coords[0]);
-            node.setAttribute("cy", coords[1]);
-            node.setAttribute("r", 3);
-            nodesFragment.appendChild(node);
-        });
-        
-        circuitGroup.appendChild(nodesFragment);
-        svg.appendChild(circuitGroup);
-        
-        // Create radar/pulse animation (representing monitoring)
-        const pulseGroup = document.createElementNS(svgNS, "g");
-        pulseGroup.setAttribute("class", "nvd-logo-pulse-container");
-        
-        // Pulse rings
-        for (let i = 1; i <= 3; i++) {
-            const pulse = document.createElementNS(svgNS, "circle");
-            pulse.setAttribute("cx", "120");
-            pulse.setAttribute("cy", "90");
-            pulse.setAttribute("r", "0");
-            pulse.setAttribute("class", `nvd-logo-pulse pulse-${i}`);
-            pulse.style.animationDelay = `${i * 0.7}s`;
-            pulseGroup.appendChild(pulse);
-        }
-        
-        svg.appendChild(pulseGroup);
-        
-        // Add interactive data points (blinking dots in professional pattern)
-        const dataPoints = [
-            // Outer hexagon corners
-            [75, 67], [165, 67], [75, 113], [165, 113], [120, 142],
-            // Inner security symbol points
-            [115, 85], [125, 85], [110, 95], [130, 95], [110, 105], [130, 105],
-            // Additional strategic points for better visual balance
-            [100, 75], [140, 75], [100, 105], [140, 105],
-            [120, 65]
-        ];
-        
-        const dataGroup = document.createElementNS(svgNS, "g");
-        dataGroup.setAttribute("class", "nvd-logo-data-points");
-        
-        // Use document fragment for better performance
-        const pointsFragment = document.createDocumentFragment();
-        
-        dataPoints.forEach((point, index) => {
-            const dataPoint = document.createElementNS(svgNS, "circle");
-            dataPoint.setAttribute("cx", point[0]);
-            dataPoint.setAttribute("cy", point[1]);
-            dataPoint.setAttribute("r", 2);
-            dataPoint.setAttribute("class", `nvd-logo-data-point point-${index}`);
-            dataPoint.style.animationDelay = `${Math.random() * 4}s`;
-            pointsFragment.appendChild(dataPoint);
-        });
-        
-        dataGroup.appendChild(pointsFragment);
-        svg.appendChild(dataGroup);
-        
-        // Add hover effect detection with passive option for better performance
+        // Add hover effect detection
         logoContainer.addEventListener('mouseenter', activateLogo, { passive: true });
         logoContainer.addEventListener('mouseleave', deactivateLogo, { passive: true });
         
@@ -178,33 +39,126 @@ document.addEventListener('DOMContentLoaded', function() {
             logoContainer.classList.add('nvd-logo-ready');
         });
         
-        // Export SVG as PNG for other parts of the application (with slight delay for render)
+        // Export SVG as PNG for other parts of the application
         setTimeout(() => {
             try {
                 saveSvgAsPng();
             } catch (e) {
                 console.warn('Failed to save SVG as PNG:', e);
-                // Use a fallback mechanism if saving fails
                 tryUseSavedLogo();
             }
         }, 200);
-        
-        // Start random data animation after slight delay
-        setTimeout(() => {
-            // Set up animation interval with performance check
-            const animationInterval = setInterval(() => {
-                // Only run animations if page is visible
-                if (!document.hidden) {
-                    simulateDataActivity();
-                }
-            }, 3000);
-            
-            // Store interval ID on the container for cleanup if needed
-            logoContainer.dataset.animationInterval = animationInterval;
-        }, 500);
     }
     
-    // Try to use a previously saved logo image if available
+    // Create gradients for the logo - more subdued and professional
+    function createGradients(svg, svgNS) {
+        const defs = document.createElementNS(svgNS, "defs");
+        
+        // Primary gradient - professional blues
+        const primaryGradient = document.createElementNS(svgNS, "linearGradient");
+        primaryGradient.setAttribute("id", "primaryGradient");
+        primaryGradient.setAttribute("x1", "0%");
+        primaryGradient.setAttribute("y1", "0%");
+        primaryGradient.setAttribute("x2", "100%");
+        primaryGradient.setAttribute("y2", "100%");
+        
+        const primaryStop1 = document.createElementNS(svgNS, "stop");
+        primaryStop1.setAttribute("offset", "0%");
+        primaryStop1.setAttribute("stop-color", "#2c5282"); // Deep professional blue
+        primaryGradient.appendChild(primaryStop1);
+        
+        const primaryStop2 = document.createElementNS(svgNS, "stop");
+        primaryStop2.setAttribute("offset", "100%");
+        primaryStop2.setAttribute("stop-color", "#1a365d"); // Darker blue
+        primaryGradient.appendChild(primaryStop2);
+        
+        defs.appendChild(primaryGradient);
+        
+        // Secondary gradient - subtle accent
+        const secondaryGradient = document.createElementNS(svgNS, "linearGradient");
+        secondaryGradient.setAttribute("id", "secondaryGradient");
+        secondaryGradient.setAttribute("x1", "0%");
+        secondaryGradient.setAttribute("y1", "0%");
+        secondaryGradient.setAttribute("x2", "100%");
+        secondaryGradient.setAttribute("y2", "100%");
+        
+        const secondaryStop1 = document.createElementNS(svgNS, "stop");
+        secondaryStop1.setAttribute("offset", "0%");
+        secondaryStop1.setAttribute("stop-color", "#3182ce"); // Professional blue
+        secondaryGradient.appendChild(secondaryStop1);
+        
+        const secondaryStop2 = document.createElementNS(svgNS, "stop");
+        secondaryStop2.setAttribute("offset", "100%");
+        secondaryStop2.setAttribute("stop-color", "#2b6cb0"); // Mid-blue
+        secondaryGradient.appendChild(secondaryStop2);
+        
+        defs.appendChild(secondaryGradient);
+        
+        svg.appendChild(defs);
+    }
+    
+    // Create main logo shape - clean, professional hexagon
+    function createLogoShape(svg, svgNS) {
+        // Create a hexagon shaped container - optimized for sidebar
+        const logoContainer = document.createElementNS(svgNS, "path");
+        logoContainer.setAttribute("class", "nvd-logo-main-shape");
+        logoContainer.setAttribute("d", "M120,50 L180,85 L180,155 L120,190 L60,155 L60,85 Z");
+        svg.appendChild(logoContainer);
+        
+        // Create inner hexagon for subtle layered effect
+        const innerHexagon = document.createElementNS(svgNS, "path");
+        innerHexagon.setAttribute("class", "nvd-logo-inner-shape");
+        innerHexagon.setAttribute("d", "M120,70 L160,95 L160,145 L120,170 L80,145 L80,95 Z");
+        svg.appendChild(innerHexagon);
+    }
+    
+    // Create inner elements of the logo - minimalist database representation
+    function createInnerElements(svg, svgNS) {
+        // Create minimalist database cylinder
+        const databaseBody = document.createElementNS(svgNS, "path");
+        databaseBody.setAttribute("class", "nvd-logo-database-body");
+        databaseBody.setAttribute("d", "M100,100 C100,93 140,93 140,100 L140,140 C140,147 100,147 100,140 Z");
+        svg.appendChild(databaseBody);
+        
+        // Database top ellipse
+        const databaseTop = document.createElementNS(svgNS, "ellipse");
+        databaseTop.setAttribute("class", "nvd-logo-database-top");
+        databaseTop.setAttribute("cx", "120");
+        databaseTop.setAttribute("cy", "100");
+        databaseTop.setAttribute("rx", "20");
+        databaseTop.setAttribute("ry", "7");
+        svg.appendChild(databaseTop);
+        
+        // Database middle segment line
+        const databaseMiddle = document.createElementNS(svgNS, "ellipse");
+        databaseMiddle.setAttribute("class", "nvd-logo-database-segment");
+        databaseMiddle.setAttribute("cx", "120");
+        databaseMiddle.setAttribute("cy", "120");
+        databaseMiddle.setAttribute("rx", "20");
+        databaseMiddle.setAttribute("ry", "7");
+        svg.appendChild(databaseMiddle);
+        
+        // Create minimalist data lines
+        const dataLines = [
+            "M105,110 L135,110",
+            "M105,130 L135,130"
+        ];
+        
+        dataLines.forEach((path, index) => {
+            const dataLine = document.createElementNS(svgNS, "path");
+            dataLine.setAttribute("class", `nvd-logo-data-line line-${index}`);
+            dataLine.setAttribute("d", path);
+            svg.appendChild(dataLine);
+        });
+        
+        // Add a simple shield overlay for security representation
+        const shieldSymbol = document.createElementNS(svgNS, "path");
+        shieldSymbol.setAttribute("class", "nvd-logo-shield");
+        shieldSymbol.setAttribute("d", "M120,90 L130,95 L130,110 L120,115 L110,110 L110,95 Z");
+        svg.appendChild(shieldSymbol);
+    }
+    
+    // Try to use a previously saved logo image
     function tryUseSavedLogo() {
         const savedLogo = localStorage.getItem('nvd-logo-png');
         if (savedLogo) {
@@ -212,140 +166,58 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Hilfsfunktion, um das SVG in ein Canvas zu rendern und als PNG zu verwenden
+    // Convert SVG to PNG for use elsewhere
     function saveSvgAsPng() {
         const svg = document.querySelector('.nvd-logo-svg');
         if (!svg) return;
         
-        // Verstecktes Canvas erstellen
         const canvas = document.createElement('canvas');
         canvas.width = 240;
-        canvas.height = 180;
+        canvas.height = 240;
         canvas.style.position = 'absolute';
         canvas.style.top = '-9999px';
         canvas.style.left = '-9999px';
         document.body.appendChild(canvas);
         
-        // SVG Data URL erstellen
         const svgData = new XMLSerializer().serializeToString(svg);
         const svgURL = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
         
-        // SVG in Canvas rendern und als PNG exportieren
         const img = new Image();
         img.onload = function() {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
             
-            // Canvas als PNG-Daten extrahieren
             const pngData = canvas.toDataURL('image/png');
             
-            // Verstecktes Bild erstellen, um es für andere Teile der Anwendung zu verwenden
-            const hiddenImg = new Image();
-            hiddenImg.src = pngData;
-            hiddenImg.id = 'logo-png-data';
-            hiddenImg.style.display = 'none';
-            document.body.appendChild(hiddenImg);
-            
-            // Speichere Data-URL im localStorage für andere Seiten
             localStorage.setItem('nvd-logo-png', pngData);
             
-            // Canvas entfernen
             document.body.removeChild(canvas);
             
-            // Alle statischen Logo-Bilder mit der neuen Version aktualisieren
             updateStaticLogos(pngData);
         };
         img.src = svgURL;
     }
     
-    // Alle statischen Logos in der Anwendung aktualisieren
+    // Update all static logos in the application
     function updateStaticLogos(pngData) {
         if (!pngData) return;
         
-        // Alle Bilder mit der Klasse 'logo-img' aktualisieren
         const logoImgs = document.querySelectorAll('.logo-img');
         logoImgs.forEach(img => {
             img.src = pngData;
         });
         
-        // Favicon aktualisieren
         const favicon = document.querySelector('link[rel="icon"]');
         if (favicon) {
             favicon.href = pngData;
         }
     }
     
-    // Add page-specific animations based on the current page
-    function addPageSpecificAnimations() {
-        const currentPath = window.location.pathname;
-        const logoContainer = document.getElementById('nvd-logo-container');
-        if (!logoContainer) return;
-        
-        // Remove any existing page-specific classes
-        logoContainer.classList.remove('nvd-logo-dashboard', 'nvd-logo-severity', 'nvd-logo-monthly', 'nvd-logo-vendor', 'nvd-logo-update');
-        
-        // Add page-specific classes based on current URL
-        if (currentPath === '/' || currentPath === '/index') {
-            logoContainer.classList.add('nvd-logo-dashboard');
-        } else if (currentPath.includes('severity')) {
-            logoContainer.classList.add('nvd-logo-severity');
-        } else if (currentPath.includes('monthly')) {
-            logoContainer.classList.add('nvd-logo-monthly');
-        } else if (currentPath.includes('vendor')) {
-            logoContainer.classList.add('nvd-logo-vendor');
-        } else if (currentPath.includes('update')) {
-            logoContainer.classList.add('nvd-logo-update');
-        }
-        
-        // Make sure the pulse container is visible on all pages
-        const pulseContainer = document.querySelector('.nvd-logo-pulse-container');
-        if (pulseContainer) {
-            pulseContainer.style.display = 'block';
-            pulseContainer.style.opacity = '1';
-        }
-        
-        // Add small random animation when changing pages
-        const randomAnimation = Math.floor(Math.random() * 4);
-        switch (randomAnimation) {
-            case 0:
-                simulateDataActivity();
-                break;
-            case 1:
-                activateLogo();
-                setTimeout(deactivateLogo, 1000);
-                break;
-            case 2:
-                logoContainer.classList.add('nvd-logo-scanning');
-                setTimeout(() => logoContainer.classList.remove('nvd-logo-scanning'), 1500);
-                break;
-            case 3:
-                // Pulse animation
-                const points = document.querySelectorAll('.nvd-logo-data-point');
-                points.forEach((point, index) => {
-                    setTimeout(() => {
-                        point.classList.add('nvd-logo-point-active');
-                        setTimeout(() => point.classList.remove('nvd-logo-point-active'), 400);
-                    }, index * 100);
-                });
-                break;
-        }
-    }
-    
-    // Activate special effects on hover
+    // Activate subtle animation effects on hover
     function activateLogo() {
         const logoContainer = document.getElementById('nvd-logo-container');
         if (logoContainer) {
             logoContainer.classList.add('nvd-logo-active');
-            
-            // Initiate scanning animation
-            setTimeout(() => {
-                logoContainer.classList.add('nvd-logo-scanning');
-                
-                // End scanning after a while
-                setTimeout(() => {
-                    logoContainer.classList.remove('nvd-logo-scanning');
-                }, 1500);
-            }, 200);
         }
     }
     
@@ -357,88 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Simulate random security data activity in the logo - more dynamic version
-    function simulateDataActivity() {
-        const logoContainer = document.getElementById('nvd-logo-container');
-        if (!logoContainer || logoContainer.matches(':hover')) return;
-        
-        // Add randomness to decide if we show activity (70% chance)
-        if (Math.random() > 0.3) {
-            // Random circuit line highlight
-            const circuitLines = document.querySelectorAll('.nvd-logo-circuit-line');
-            if (circuitLines.length > 0) {
-                // Sometimes highlight multiple lines in sequence
-                const numLines = Math.floor(Math.random() * 3) + 1;
-                const usedIndices = new Set();
-                
-                for (let i = 0; i < numLines; i++) {
-                    let randomIndex;
-                    do {
-                        randomIndex = Math.floor(Math.random() * circuitLines.length);
-                    } while (usedIndices.has(randomIndex));
-                    
-                    usedIndices.add(randomIndex);
-                    const targetLine = circuitLines[randomIndex];
-                    
-                    setTimeout(() => {
-                        targetLine.classList.add('nvd-logo-data-active');
-                        setTimeout(() => {
-                            targetLine.classList.remove('nvd-logo-data-active');
-                        }, 700);
-                    }, i * 200);
-                }
-            }
-            
-            // Randomly activate multiple data points in patterns
-            const dataPoints = document.querySelectorAll('.nvd-logo-data-point');
-            if (dataPoints.length > 0 && Math.random() > 0.5) {
-                // Choose a pattern type randomly
-                const patternType = Math.floor(Math.random() * 3);
-                
-                switch (patternType) {
-                    case 0: // Sequential
-                        for (let i = 0; i < dataPoints.length; i++) {
-                            setTimeout(() => {
-                                dataPoints[i].classList.add('nvd-logo-point-active');
-                                setTimeout(() => {
-                                    dataPoints[i].classList.remove('nvd-logo-point-active');
-                                }, 400);
-                            }, i * 100);
-                        }
-                        break;
-                    case 1: // Random selection of points
-                        const numPoints = Math.floor(Math.random() * 4) + 1;
-                        const pointIndices = new Set();
-                        
-                        while (pointIndices.size < numPoints) {
-                            pointIndices.add(Math.floor(Math.random() * dataPoints.length));
-                        }
-                        
-                        pointIndices.forEach(idx => {
-                            setTimeout(() => {
-                                dataPoints[idx].classList.add('nvd-logo-point-active');
-                                setTimeout(() => {
-                                    dataPoints[idx].classList.remove('nvd-logo-point-active');
-                                }, 800);
-                            }, Math.random() * 500);
-                        });
-                        break;
-                    case 2: // Pulsing pattern
-                        for (let i = 0; i < dataPoints.length; i += 2) {
-                            setTimeout(() => {
-                                dataPoints[i].classList.add('nvd-logo-point-active');
-                                setTimeout(() => {
-                                    dataPoints[i].classList.remove('nvd-logo-point-active');
-                                }, 400);
-                            }, Math.floor(i/2) * 200);
-                        }
-                        break;
-                }
-            }
-        }
-    }
-    
-    // Initialize once DOM is ready
+    // Initialize logo
     initializeLogo();
     
     // Re-initialize on window resize for responsiveness
@@ -448,21 +239,9 @@ document.addEventListener('DOMContentLoaded', function() {
         resizeTimeout = setTimeout(initializeLogo, 200);
     });
     
-    // Check if we should use a previously generated PNG logo
+    // Use previously generated PNG logo if available
     const savedLogo = localStorage.getItem('nvd-logo-png');
     if (savedLogo) {
         updateStaticLogos(savedLogo);
     }
-    
-    // Hook into page navigation events to refresh logo animations
-    window.addEventListener('popstate', addPageSpecificAnimations);
-    
-    // Check for page changes periodically (helps with traditional navigation)
-    let lastPath = window.location.pathname;
-    setInterval(() => {
-        if (lastPath !== window.location.pathname) {
-            lastPath = window.location.pathname;
-            addPageSpecificAnimations();
-        }
-    }, 500);
 });
