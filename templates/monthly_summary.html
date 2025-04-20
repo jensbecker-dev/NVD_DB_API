@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
 {% block title %}Monthly CVE Summary{% endblock %}
 
@@ -7,28 +7,30 @@
 <style>
     /* General Enhancements */
     body {
-        background-color: #f8f9fa; /* Light background for the page */
+        background-color: var(--bg-color); /* Use CSS variable instead of hardcoded color */
     }
     .card {
         border: none; /* Remove default card borders */
         border-radius: 0.5rem; /* Softer corners */
         margin-bottom: 1.5rem; /* Consistent spacing */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+        box-shadow: var(--card-shadow); /* Use CSS variable instead of hardcoded shadow */
+        background-color: var(--card-bg); /* Card background from CSS variable */
     }
     .card-header {
-        background-color: #ffffff; /* White card headers */
-        border-bottom: 1px solid #dee2e6;
+        background-color: var(--card-bg); /* Use CSS variable instead of hardcoded color */
+        border-bottom: 1px solid var(--border-color); /* Use CSS variable for border */
         font-weight: 600;
-        color: #495057;
+        color: var(--text-color); /* Use CSS variable for text color */
     }
     .breadcrumb-item a {
         text-decoration: none;
+        color: var(--primary-color); /* Link color from CSS variable */
     }
     .page-title {
-        color: #343a40;
+        color: var(--text-color); /* Use CSS variable for text color */
     }
 
-    /* Chart Containers */
+    /* Chart Containers - no change needed */
     .chart-container {
         position: relative;
         height: 350px; /* Slightly taller charts */
@@ -38,17 +40,20 @@
     /* Table Styling */
     .table th {
         font-weight: 600;
-        color: #495057;
+        color: var(--text-color); /* Use CSS variable for text color */
         white-space: nowrap;
+        background-color: var(--hover-bg); /* Use CSS variable for background */
     }
     .table td {
         vertical-align: middle;
+        color: var(--text-color); /* Use CSS variable for text color */
+        border-color: var(--border-color); /* Use CSS variable for border color */
     }
     .month-row {
         transition: background-color 0.2s ease-in-out;
     }
     .month-row:hover {
-        background-color: #eef2f7; /* Lighter hover effect */
+        background-color: var(--hover-bg); /* Use CSS variable instead of hardcoded color */
     }
     .month-badge {
         width: 40px;
@@ -59,15 +64,16 @@
         font-weight: bold;
         border-radius: 50%;
         color: white;
-        background-color: var(--bs-primary);
+        background-color: var(--primary-color); /* Use CSS variable for background */
         font-size: 1rem;
         margin-right: 0.75rem;
     }
     .month-name {
         font-weight: 500;
+        color: var(--text-color); /* Use CSS variable for text color */
     }
 
-    /* Trend Indicators */
+    /* Trend Indicators - adapt for dark mode */
     .trend-indicator {
         display: inline-flex;
         align-items: center;
@@ -80,20 +86,21 @@
         margin-right: 0.3em;
     }
     .trend-up {
-        color: var(--bs-danger);
-        background-color: rgba(220, 53, 69, 0.1);
+        color: #ff4d4d; /* More visible in both light and dark modes */
+        background-color: rgba(220, 53, 69, 0.15); /* Slightly more opaque */
     }
     .trend-down {
-        color: var(--bs-success);
-        background-color: rgba(25, 135, 84, 0.1);
+        color: #2bb14c; /* More visible in both light and dark modes */
+        background-color: rgba(25, 135, 84, 0.15); /* Slightly more opaque */
     }
     .trend-neutral {
-        color: var(--bs-secondary);
-        background-color: rgba(108, 117, 125, 0.1);
+        color: var(--text-muted); /* Use CSS variable for text color */
+        background-color: rgba(108, 117, 125, 0.15); /* Slightly more opaque */
     }
 
     /* Severity Badges & Key Findings */
-    .severity-badge-lg { /* Larger badges for key findings */
+    /* These remain mostly the same since they're colorful indicators */
+    .severity-badge-lg {
         display: inline-block;
         width: 14px;
         height: 14px;
@@ -110,6 +117,8 @@
     .key-findings-list .list-group-item {
         border: none; /* Cleaner list */
         padding: 0.75rem 0; /* Adjust padding */
+        background-color: transparent; /* Transparent background */
+        color: var(--text-color); /* Use CSS variable for text color */
     }
     .key-findings-list .badge {
         font-size: 0.9em;
@@ -118,6 +127,32 @@
     /* Year Selector */
     #yearSelector {
         max-width: 150px; /* Limit width */
+        background-color: var(--input-bg); /* Use CSS variable */
+        color: var(--text-color); /* Use CSS variable */
+        border-color: var(--input-border); /* Use CSS variable */
+    }
+    
+    /* Dark mode adjustments for badge styles */
+    [data-bs-theme="dark"] .badge.bg-light {
+        background-color: #2b3035 !important;
+        border-color: #6ea8fe !important;
+    }
+    
+    [data-bs-theme="dark"] .badge.text-dark {
+        color: #e9ecef !important;
+    }
+    
+    /* Ensure peak month badge is visible in dark mode */
+    [data-bs-theme="dark"] .badge.bg-light.text-dark {
+        background-color: #2b3035 !important;
+        color: #e9ecef !important; 
+    }
+    
+    /* Alert styling for dark mode */
+    [data-bs-theme="dark"] .alert-primary {
+        background-color: rgba(13, 110, 253, 0.15);
+        color: #e9ecef;
+        border-color: rgba(13, 110, 253, 0.4);
     }
 
     /* Responsive Adjustments */
@@ -267,24 +302,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const allYears = {{ years|tojson }};
     const initialYear = {{ selected_year|tojson }};
     const monthNames = {{ month_names|tojson }}; // Should be full month names ['January', 'February', ...]
+    const htmlElement = document.documentElement;
+    const isDarkMode = htmlElement.getAttribute('data-bs-theme') === 'dark';
 
-    // --- Chart Colors ---
+    // --- Chart Colors (adaptive for dark/light mode) ---
     const colors = {
         primary: '#0d6efd',
-        primaryLight: 'rgba(13, 110, 253, 0.2)',
+        primaryLight: isDarkMode ? 'rgba(13, 110, 253, 0.4)' : 'rgba(13, 110, 253, 0.2)',
         critical: '#dc3545',
-        criticalLight: 'rgba(220, 53, 69, 0.2)',
+        criticalLight: isDarkMode ? 'rgba(220, 53, 69, 0.4)' : 'rgba(220, 53, 69, 0.2)',
         high: '#fd7e14', // Orange for High
-        highLight: 'rgba(253, 126, 20, 0.2)',
+        highLight: isDarkMode ? 'rgba(253, 126, 20, 0.4)' : 'rgba(253, 126, 20, 0.2)',
         medium: '#ffc107', // Yellow for Medium
-        mediumLight: 'rgba(255, 193, 7, 0.2)',
+        mediumLight: isDarkMode ? 'rgba(255, 193, 7, 0.4)' : 'rgba(255, 193, 7, 0.2)',
         low: '#0dcaf0', // Cyan for Low
-        lowLight: 'rgba(13, 202, 240, 0.2)',
+        lowLight: isDarkMode ? 'rgba(13, 202, 240, 0.4)' : 'rgba(13, 202, 240, 0.2)',
         unknown: '#6c757d', // Grey for Unknown
-        unknownLight: 'rgba(108, 117, 125, 0.2)',
+        unknownLight: isDarkMode ? 'rgba(108, 117, 125, 0.4)' : 'rgba(108, 117, 125, 0.2)',
         success: '#198754',
         danger: '#dc3545',
-        secondary: '#6c757d'
+        secondary: '#6c757d',
+        chartGrid: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+        chartText: isDarkMode ? '#e9ecef' : '#495057',
+        pieBorder: isDarkMode ? '#2b3035' : '#ffffff'
     };
 
     // --- Chart Instances ---
@@ -504,16 +544,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Number of CVEs' }
+                        title: { 
+                            display: true, 
+                            text: 'Number of CVEs',
+                            color: colors.chartText 
+                        },
+                        grid: {
+                            color: colors.chartGrid
+                        },
+                        ticks: {
+                            color: colors.chartText
+                        }
                     },
                     x: {
-                         title: { display: true, text: 'Month' }
+                        title: { 
+                            display: true, 
+                            text: 'Month',
+                            color: colors.chartText 
+                        },
+                        grid: {
+                            color: colors.chartGrid
+                        },
+                        ticks: {
+                            color: colors.chartText
+                        }
                     }
                 },
                 plugins: {
                     title: { display: false }, // Title handled by card header
-                    legend: { display: true, position: 'top' },
-                    tooltip: { mode: 'index', intersect: false }
+                    legend: { 
+                        display: true, 
+                        position: 'top',
+                        labels: {
+                            color: colors.chartText
+                        }
+                    },
+                    tooltip: { 
+                        mode: 'index', 
+                        intersect: false,
+                        backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+                        titleColor: isDarkMode ? '#ffffff' : '#000000',
+                        bodyColor: isDarkMode ? '#e9ecef' : '#495057',
+                        borderColor: colors.chartGrid,
+                        borderWidth: 1
+                    }
                 },
                 interaction: {
                     mode: 'index',
@@ -536,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     label: 'Severity Distribution',
                     data: [initialTotals.critical, initialTotals.high, initialTotals.medium, initialTotals.low, initialTotals.unknown],
                     backgroundColor: [colors.critical, colors.high, colors.medium, colors.low, colors.unknown],
-                    borderColor: '#ffffff', // White border between segments
+                    borderColor: colors.pieBorder, // Adaptive border color
                     borderWidth: 2
                 }]
             },
@@ -544,9 +618,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
+                    legend: { 
+                        display: true, 
+                        position: 'bottom', 
+                        labels: { 
+                            boxWidth: 12,
+                            color: colors.chartText
+                        } 
+                    },
                     title: { display: false }, // Title handled by card header
                     tooltip: {
+                        backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+                        titleColor: isDarkMode ? '#ffffff' : '#000000',
+                        bodyColor: isDarkMode ? '#e9ecef' : '#495057',
                         callbacks: {
                             label: function(context) {
                                 let label = context.label || '';
@@ -585,7 +669,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 label: year.toString(),
                 data: counts,
                 borderColor: `hsl(${hue}, 70%, 50%)`,
-                // backgroundColor: `hsla(${hue}, 70%, 50%, 0.1)`, // Optional fill
                 borderWidth: 2,
                 tension: 0.3,
                 fill: false,
@@ -606,16 +689,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: 'Total CVEs per Month' }
-                     },
-                     x: {
-                         title: { display: true, text: 'Month' }
-                     }
+                        title: { 
+                            display: true, 
+                            text: 'Total CVEs per Month',
+                            color: colors.chartText 
+                        },
+                        grid: {
+                            color: colors.chartGrid
+                        },
+                        ticks: {
+                            color: colors.chartText
+                        }
+                    },
+                    x: {
+                        title: { 
+                            display: true, 
+                            text: 'Month',
+                            color: colors.chartText 
+                        },
+                        grid: {
+                            color: colors.chartGrid
+                        },
+                        ticks: {
+                            color: colors.chartText
+                        }
+                    }
                 },
                 plugins: {
                     title: { display: false }, // Title handled by card header
-                    legend: { display: true, position: 'top' },
-                    tooltip: { mode: 'index', intersect: false }
+                    legend: { 
+                        display: true, 
+                        position: 'top',
+                        labels: {
+                            color: colors.chartText
+                        }
+                    },
+                    tooltip: { 
+                        mode: 'index', 
+                        intersect: false,
+                        backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)',
+                        titleColor: isDarkMode ? '#ffffff' : '#000000',
+                        bodyColor: isDarkMode ? '#e9ecef' : '#495057',
+                        borderColor: colors.chartGrid,
+                        borderWidth: 1
+                    }
                 },
                 interaction: {
                     mode: 'index',
@@ -637,6 +754,84 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSeverityPieChart(selectedYear);
             updateKeyFindings(selectedYear);
             // Note: Year comparison chart shows multiple years, doesn't need update on single year change
+        });
+    }
+
+    // Listen for theme changes and update charts accordingly
+    const darkModeSwitch = document.getElementById('darkModeSwitch');
+    if (darkModeSwitch) {
+        darkModeSwitch.addEventListener('change', function() {
+            // Get the new theme state
+            const newIsDarkMode = htmlElement.getAttribute('data-bs-theme') === 'dark';
+            
+            // Update color scheme based on new theme
+            colors.primaryLight = newIsDarkMode ? 'rgba(13, 110, 253, 0.4)' : 'rgba(13, 110, 253, 0.2)';
+            colors.criticalLight = newIsDarkMode ? 'rgba(220, 53, 69, 0.4)' : 'rgba(220, 53, 69, 0.2)';
+            colors.highLight = newIsDarkMode ? 'rgba(253, 126, 20, 0.4)' : 'rgba(253, 126, 20, 0.2)';
+            colors.mediumLight = newIsDarkMode ? 'rgba(255, 193, 7, 0.4)' : 'rgba(255, 193, 7, 0.2)';
+            colors.lowLight = newIsDarkMode ? 'rgba(13, 202, 240, 0.4)' : 'rgba(13, 202, 240, 0.2)';
+            colors.unknownLight = newIsDarkMode ? 'rgba(108, 117, 125, 0.4)' : 'rgba(108, 117, 125, 0.2)';
+            colors.chartGrid = newIsDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+            colors.chartText = newIsDarkMode ? '#e9ecef' : '#495057';
+            colors.pieBorder = newIsDarkMode ? '#2b3035' : '#ffffff';
+            
+            // Update chart colors
+            if (trendChart) {
+                // Update scales
+                Object.values(trendChart.options.scales).forEach(scale => {
+                    if (scale.title) scale.title.color = colors.chartText;
+                    scale.ticks.color = colors.chartText;
+                    scale.grid.color = colors.chartGrid;
+                });
+                // Update legend
+                trendChart.options.plugins.legend.labels.color = colors.chartText;
+                // Update tooltip
+                trendChart.options.plugins.tooltip.backgroundColor = newIsDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)';
+                trendChart.options.plugins.tooltip.titleColor = newIsDarkMode ? '#ffffff' : '#000000';
+                trendChart.options.plugins.tooltip.bodyColor = newIsDarkMode ? '#e9ecef' : '#495057';
+                // Update datasets
+                trendChart.data.datasets[0].backgroundColor = colors.primaryLight;
+                trendChart.update();
+            }
+            
+            if (pieChart) {
+                // Update legend
+                pieChart.options.plugins.legend.labels.color = colors.chartText;
+                // Update tooltip
+                pieChart.options.plugins.tooltip.backgroundColor = newIsDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)';
+                pieChart.options.plugins.tooltip.titleColor = newIsDarkMode ? '#ffffff' : '#000000';
+                pieChart.options.plugins.tooltip.bodyColor = newIsDarkMode ? '#e9ecef' : '#495057';
+                // Update border color
+                pieChart.data.datasets[0].borderColor = colors.pieBorder;
+                pieChart.update();
+            }
+            
+            if (comparisonChart) {
+                // Update scales
+                Object.values(comparisonChart.options.scales).forEach(scale => {
+                    if (scale.title) scale.title.color = colors.chartText;
+                    scale.ticks.color = colors.chartText;
+                    scale.grid.color = colors.chartGrid;
+                });
+                // Update legend
+                comparisonChart.options.plugins.legend.labels.color = colors.chartText;
+                // Update tooltip
+                comparisonChart.options.plugins.tooltip.backgroundColor = newIsDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)';
+                comparisonChart.options.plugins.tooltip.titleColor = newIsDarkMode ? '#ffffff' : '#000000';
+                comparisonChart.options.plugins.tooltip.bodyColor = newIsDarkMode ? '#e9ecef' : '#495057';
+                comparisonChart.update();
+            }
+            
+            // Update badge background colors with new theme colors
+            const styleSheet = document.createElement("style");
+            styleSheet.innerText = `
+                .bg-danger-light { background-color: ${colors.criticalLight} !important; }
+                .bg-warning-light { background-color: ${colors.highLight} !important; }
+                .bg-info-light { background-color: ${colors.mediumLight} !important; }
+                .bg-primary-light { background-color: ${colors.lowLight} !important; }
+                .bg-secondary-light { background-color: ${colors.unknownLight} !important; }
+            `;
+            document.head.appendChild(styleSheet);
         });
     }
 

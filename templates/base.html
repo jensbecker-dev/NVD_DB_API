@@ -37,15 +37,38 @@
             --border-radius: 8px;
             --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             --transition-normal: all 0.3s ease;
+            
+            /* Light mode (default) */
+            --bg-color: #f8fafb;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --border-color: rgba(0,0,0,0.05);
+            --input-bg: #ffffff;
+            --input-border: rgba(0,0,0,0.1);
+            --hover-bg: rgba(0,0,0,0.02);
+            --footer-bg: #f8f9fa;
+        }
+        
+        /* Dark mode color variables */
+        [data-bs-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e9ecef;
+            --card-bg: #1e1e1e;
+            --border-color: rgba(255,255,255,0.07);
+            --input-bg: #2c2c2c;
+            --input-border: rgba(255,255,255,0.15);
+            --hover-bg: rgba(255,255,255,0.05);
+            --footer-bg: #1e1e1e;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         body {
             min-height: 100vh;
             padding-left: 0;
-            background-color: #f8fafb;
-            transition: padding-left 0.3s ease;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: padding-left 0.3s ease, background-color 0.3s ease, color 0.3s ease;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: #2c3e50;
         }
         
         @media (min-width: 768px) {
@@ -189,6 +212,8 @@
         
         /* Enhanced Card Styling */
         .card {
+            background-color: var(--card-bg);
+            color: var(--text-color);
             border: none;
             border-radius: var(--border-radius);
             box-shadow: var(--card-shadow);
@@ -203,8 +228,8 @@
         }
         
         .card-header {
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            background-color: #fff;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--card-bg);
             font-weight: 600;
             padding: 1rem 1.25rem;
         }
@@ -316,18 +341,26 @@
         .table {
             border-radius: var(--border-radius);
             overflow: hidden;
+            color: var(--text-color);
         }
         
         .table th {
             font-weight: 600;
-            background-color: rgba(0,0,0,0.02);
+            background-color: var(--hover-bg);
             border-bottom-width: 1px;
+            border-color: var(--border-color);
+        }
+        
+        .table td {
+            border-color: var(--border-color);
         }
         
         /* Form control styling */
         .form-control, .form-select {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border-color: var(--input-border);
             border-radius: 6px;
-            border-color: rgba(0,0,0,0.1);
             padding: 0.6rem 0.85rem;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             transition: all 0.25s;
@@ -336,6 +369,14 @@
         .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.25);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+        
+        /* Make placeholder text visible in dark mode */
+        .form-control::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
         }
         
         /* Charts container styling */
@@ -355,7 +396,7 @@
         .search-wrapper .form-control {
             padding-left: 40px;
             height: 48px;
-            background-color: white;
+            background-color: var(--input-bg);
         }
         
         .search-icon {
@@ -363,12 +404,12 @@
             left: 14px;
             top: 50%;
             transform: translateY(-50%);
-            color: #8b95a6;
+            color: var(--text-muted);
         }
         
         /* CVE details page improvements */
         .cve-header {
-            background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f9 100%);
+            background: linear-gradient(135deg, var(--hover-bg) 0%, var(--hover-bg) 100%);
             border-left: 5px solid var(--primary-color);
             border-radius: 8px;
             padding: 20px;
@@ -493,6 +534,16 @@
             <a href="{{ url_for('update_database') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'update_database' %}active{% endif %}">
                 <i class="bi bi-arrow-repeat me-2"></i>Update Database
             </a>
+            
+            <!-- Theme Toggle -->
+            <div class="list-group-item d-flex justify-content-between align-items-center" id="theme-toggle-btn" role="button">
+                <div>
+                    <i class="bi bi-circle-half me-2"></i>Toggle Dark Mode
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -507,9 +558,9 @@
         {% endblock %}
     </main>
 
-    <footer class="bg-light py-3 mt-auto">
+    <footer class="py-3 mt-auto" style="background-color: var(--footer-bg); border-top: 1px solid var(--border-color);">
         <div class="container text-center">
-            <p class="text-muted mb-0">
+            <p class="mb-0" style="color: var(--text-color);">
                 NVD CVE Database &copy; {{ now().year }}
             </p>
         </div>
@@ -533,6 +584,42 @@
                     delay: { show: 100, hide: 100 }
                 });
             });
+            
+            // Dark mode functionality
+            const darkModeToggle = document.getElementById('theme-toggle-btn');
+            const darkModeSwitch = document.getElementById('darkModeSwitch');
+            const htmlElement = document.documentElement;
+            
+            // Check for saved theme preference or respect OS preference
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            // Apply theme based on saved preference or OS preference
+            if (savedTheme === 'dark' || (!savedTheme && prefersDarkMode)) {
+                htmlElement.setAttribute('data-bs-theme', 'dark');
+                darkModeSwitch.checked = true;
+            } else {
+                htmlElement.setAttribute('data-bs-theme', 'light');
+                darkModeSwitch.checked = false;
+            }
+            
+            // Toggle theme when the switch is clicked
+            darkModeToggle.addEventListener('click', function() {
+                darkModeSwitch.checked = !darkModeSwitch.checked;
+                toggleTheme();
+            });
+            
+            darkModeSwitch.addEventListener('change', toggleTheme);
+            
+            function toggleTheme() {
+                if (darkModeSwitch.checked) {
+                    htmlElement.setAttribute('data-bs-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    htmlElement.setAttribute('data-bs-theme', 'light');
+                    localStorage.setItem('theme', 'light');
+                }
+            }
             
             // Mobile sidebar toggle with improved animation
             const sidebarToggle = document.getElementById('sidebarToggle');
@@ -600,9 +687,11 @@
             
             // Apply Chart.js global defaults for a consistent look
             Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-            Chart.defaults.color = "#5a6474";
-            Chart.defaults.borderColor = "rgba(0,0,0,0.05)";
-            Chart.defaults.plugins.tooltip.backgroundColor = "rgba(0,0,0,0.8)";
+            Chart.defaults.color = htmlElement.getAttribute('data-bs-theme') === 'dark' ? "#e9ecef" : "#5a6474";
+            Chart.defaults.borderColor = htmlElement.getAttribute('data-bs-theme') === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
+            Chart.defaults.plugins.tooltip.backgroundColor = htmlElement.getAttribute('data-bs-theme') === 'dark' ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.8)";
+            Chart.defaults.plugins.tooltip.titleColor = htmlElement.getAttribute('data-bs-theme') === 'dark' ? "#ffffff" : "#ffffff";
+            Chart.defaults.plugins.tooltip.bodyColor = htmlElement.getAttribute('data-bs-theme') === 'dark' ? "#e9ecef" : "#ffffff";
             Chart.defaults.plugins.tooltip.padding = 10;
             Chart.defaults.plugins.tooltip.cornerRadius = 6;
             Chart.defaults.plugins.tooltip.titleFont = { weight: 'bold', size: 13 };
@@ -612,6 +701,21 @@
             Chart.defaults.plugins.legend.position = 'top';
             Chart.defaults.plugins.legend.labels.usePointStyle = true;
             Chart.defaults.plugins.legend.labels.padding = 15;
+            Chart.defaults.plugins.legend.labels.color = htmlElement.getAttribute('data-bs-theme') === 'dark' ? "#e9ecef" : "#5a6474";
+            
+            // Update Chart.js colors when theme changes
+            darkModeSwitch.addEventListener('change', function() {
+                const isDark = htmlElement.getAttribute('data-bs-theme') === 'dark';
+                Chart.defaults.color = isDark ? "#e9ecef" : "#5a6474";
+                Chart.defaults.borderColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
+                Chart.defaults.plugins.tooltip.backgroundColor = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.8)";
+                Chart.defaults.plugins.legend.labels.color = isDark ? "#e9ecef" : "#5a6474";
+                
+                // Update all active charts
+                Chart.instances.forEach(chart => {
+                    chart.update();
+                });
+            });
         });
     </script>
     {% block scripts %}{% endblock %}

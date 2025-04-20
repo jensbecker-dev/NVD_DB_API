@@ -1,11 +1,6 @@
 # NVD CVE Database Explorer
 
-<div align="center">
-  <img src="static/logo.png" alt="NVD CVE Database Explorer Logo" width="200">
-  <br>
-  <br>
-  <strong>A comprehensive solution for security vulnerability analysis</strong>
-</div>
+![Dashboard](screenshots/dashboard.png)
 
 ## Overview
 
@@ -22,10 +17,6 @@ NVD CVE Database Explorer is a powerful web application for managing, analyzing,
 - **REST API**: Programmatic access options for integrations with other tools
 - **Category-based Filtering**: Focused search for specific vulnerability types
 - **Monthly Summaries**: Overview of vulnerability trends over time
-
-## Statistical Analysis
-
-
 
 ## Installation
 
