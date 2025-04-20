@@ -221,7 +221,7 @@
                         <!-- Previous page -->
                         {% if current_page > 1 %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('vendor_detail', vendor=vendor, page=current_page-1) }}" aria-label="Previous">
+                            <a class="page-link" href="{{ url_for('vendor_detail', vendor_slug=vendor_slug, page=current_page-1) }}" aria-label="Previous">
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
@@ -240,7 +240,7 @@
                         
                         {% for page_num in range(start_page, end_page + 1) %}
                         <li class="page-item {% if page_num == current_page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('vendor_detail', vendor=vendor, page=page_num) }}">
+                            <a class="page-link" href="{{ url_for('vendor_detail', vendor_slug=vendor_slug, page=page_num) }}">
                                 {{ page_num }}
                             </a>
                         </li>
@@ -249,7 +249,7 @@
                         <!-- Next page -->
                         {% if current_page < total_pages %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ url_for('vendor_detail', vendor=vendor, page=current_page+1) }}" aria-label="Next">
+                            <a class="page-link" href="{{ url_for('vendor_detail', vendor_slug=vendor_slug, page=current_page+1) }}" aria-label="Next">
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
@@ -280,7 +280,7 @@
                         <div class="card-body">
                             <h5 class="card-title">{{ vendor.name }}</h5>
                             <p class="text-muted">{{ vendor.cve_count }} CVEs</p>
-                            <a href="{{ url_for('vendor_detail', vendor=vendor.slug) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                            <a href="{{ url_for('vendor_detail', vendor_slug=vendor.slug) }}" class="btn btn-sm btn-outline-primary">View Details</a>
                         </div>
                     </div>
                 </div>

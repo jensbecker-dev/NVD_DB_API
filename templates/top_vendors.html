@@ -122,20 +122,20 @@
                     <h2 class="h5 mb-0">Vendor Statistics</h2>
                 </div>
                 <div class="card-body">
-                    <p class="mb-3">Analysis of <strong>{{ vendors|length }}</strong> software vendors with known vulnerabilities.</p>
+                    <p class="mb-3">Analysis of <strong>{{ total_vendor_count }}</strong> software vendors with known vulnerabilities.</p>
                     
                     <div class="mb-3">
                         <h6 class="text-muted mb-2">Vendors with Critical Vulnerabilities</h6>
                         <div class="d-flex align-items-center">
                             <div class="vendor-count text-danger me-3">
-                                {{ vendors|selectattr('has_critical')|list|length }}
+                                {{ vendors_with_critical_count }}
                             </div>
                             <div>
                                 <div class="text-muted mb-1">
-                                    {{ (vendors|selectattr('has_critical')|list|length / vendors|length * 100)|round|int }}% of all vendors
+                                    {{ percent_critical }}% of all vendors
                                 </div>
                                 <div class="progress" style="height: 8px; width: 100px;">
-                                    <div class="progress-bar bg-danger" style="width: {{ (vendors|selectattr('has_critical')|list|length / vendors|length * 100)|round|int }}%"></div>
+                                    <div class="progress-bar bg-danger" style="width: {{ percent_critical }}%"></div>
                                 </div>
                             </div>
                         </div>
@@ -145,14 +145,14 @@
                         <h6 class="text-muted mb-2">Vendors with High Vulnerabilities</h6>
                         <div class="d-flex align-items-center">
                             <div class="vendor-count text-warning me-3">
-                                {{ vendors|selectattr('has_high')|list|length }}
+                                {{ vendors_with_high_count }}
                             </div>
                             <div>
                                 <div class="text-muted mb-1">
-                                    {{ (vendors|selectattr('has_high')|list|length / vendors|length * 100)|round|int }}% of all vendors
+                                    {{ percent_high }}% of all vendors
                                 </div>
                                 <div class="progress" style="height: 8px; width: 100px;">
-                                    <div class="progress-bar bg-warning" style="width: {{ (vendors|selectattr('has_high')|list|length / vendors|length * 100)|round|int }}%"></div>
+                                    <div class="progress-bar bg-warning" style="width: {{ percent_high }}%"></div>
                                 </div>
                             </div>
                         </div>
@@ -232,7 +232,7 @@
                         </div>
                     </div>
                     
-                    <a href="{{ url_for('vendor_detail', vendor=vendor.slug) }}" class="btn btn-sm btn-outline-primary mt-2">
+                    <a href="{{ url_for('vendor_detail', vendor_slug=vendor.slug) }}" class="btn btn-sm btn-outline-primary mt-2">
                         <i class="bi bi-eye me-1"></i>View Details
                     </a>
                 </div>

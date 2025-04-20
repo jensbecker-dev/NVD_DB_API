@@ -76,6 +76,8 @@ apache_vulns = nvd.search_by_product("apache", "log4j")
 
 ## Special Features
 
+![Monthly Summaries](screenshots/monthly_sum.png)
+
 ### Vendor Analyses
 Detailed insights into the security situation of specific vendors:
 - Top vendors by number of vulnerabilities

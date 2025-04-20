@@ -231,25 +231,25 @@
         
         <h5 class="section-title"><i class="bi bi-bug me-2"></i>Vulnerability</h5>
         <div class="list-group list-group-flush">
-            <a href="{{ url_for('vulnerability_category', category='sql-injection') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='sql-injection') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='sql-injection') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='sql-injection') %}active{% endif %}">
                 <i class="bi bi-file-earmark-code me-2"></i>SQL Injection
             </a>
-            <a href="{{ url_for('vulnerability_category', category='remote-code-execution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='remote-code-execution') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='remote-code-execution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='remote-code-execution') %}active{% endif %}">
                 <i class="bi bi-code-slash me-2"></i>Remote Code Execution
             </a>
-            <a href="{{ url_for('vulnerability_category', category='cross-site-scripting') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='cross-site-scripting') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='cross-site-scripting') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='cross-site-scripting') %}active{% endif %}">
                 <i class="bi bi-braces me-2"></i>Cross-Site Scripting
             </a>
-            <a href="{{ url_for('vulnerability_category', category='authentication-bypass') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='authentication-bypass') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='authentication-bypass') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='authentication-bypass') %}active{% endif %}">
                 <i class="bi bi-shield-x me-2"></i>Authentication Bypass
             </a>
-            <a href="{{ url_for('vulnerability_category', category='denial-of-service') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='denial-of-service') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='denial-of-service') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='denial-of-service') %}active{% endif %}">
                 <i class="bi bi-exclamation-triangle me-2"></i>Denial of Service
             </a>
-            <a href="{{ url_for('vulnerability_category', category='information-disclosure') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='information-disclosure') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='information-disclosure') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='information-disclosure') %}active{% endif %}">
                 <i class="bi bi-info-circle me-2"></i>Information Disclosure
             </a>
-            <a href="{{ url_for('vulnerability_category', category='buffer-overflow') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='buffer-overflow') %}active{% endif %}">
+            <a href="{{ url_for('vulnerability_category', category_slug='buffer-overflow') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category_slug='buffer-overflow') %}active{% endif %}">
                 <i class="bi bi-hdd-stack me-2"></i>Buffer Overflow
             </a>
         </div>
@@ -266,7 +266,7 @@
                 <i class="bi bi-building me-2"></i>Vendor Analysis
             </a>
             <a href="{{ url_for('top_vendors') }}" class="list-group-item list-group-item-action {% if request.path == url_for('top_vendors') %}active{% endif %}">
-                <i class="bi bi-award me-2"></i>Top Vendors
+                Vendor Analysis
             </a>
         </div>
         
@@ -385,4 +385,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
-`
+``` 

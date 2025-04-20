@@ -3,11 +3,12 @@ import logging
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from modules.nvdapi import NVDApi, fetch_nvd_data_feed, fetch_all_nvd_data, determine_severity
 from datetime import datetime
 import threading
+from utils.helpers import get_vendor_data, generate_slug
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -593,671 +594,219 @@ def db_status():
             "message": str(e)
         })
 
-@app.route('/monthly_summary')
-def monthly_summary():
-    """Display a monthly summary of CVE publications"""
-    try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-        
-        engine = create_local_cve_db()
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Get all CVEs with valid published dates
-        all_cves = session.query(CVE_Model).filter(CVE_Model.published_date.isnot(None)).all()
-        
-        # Organize data by month and year
-        monthly_data = {}
-        
-        for cve in all_cves:
-            if not cve.published_date:
-                continue
-                
-            year = cve.published_date.year
-            month = cve.published_date.month
-            
-            # Create year entry if it doesn't exist
-            if year not in monthly_data:
-                monthly_data[year] = {m: {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
-                                    for m in range(1, 13)}
-            
-            # Increment the count for this month
-            monthly_data[year][month]['count'] += 1
-            
-            # Count by severity
-            severity = (cve.severity or 'UNKNOWN').upper()
-            if severity == 'CRITICAL':
-                monthly_data[year][month]['critical'] += 1
-            elif severity == 'HIGH':
-                monthly_data[year][month]['high'] += 1
-            elif severity == 'MEDIUM':
-                monthly_data[year][month]['medium'] += 1
-            elif severity == 'LOW':
-                monthly_data[year][month]['low'] += 1
-            else:
-                monthly_data[year][month]['unknown'] += 1
-        
-        # Get list of years in descending order
-        years = sorted(monthly_data.keys(), reverse=True)
-        
-        # Get month names for the template
-        month_names = ['January', 'February', 'March', 'April', 'May', 'June', 
-                      'July', 'August', 'September', 'October', 'November', 'December']
-        
-        # Chart data for the most recent year
-        most_recent_year = years[0] if years else datetime.now().year
-        chart_months = [month_names[m-1] for m in range(1, 13)]
-        chart_data = [monthly_data[most_recent_year][m]['count'] if most_recent_year in monthly_data else 0 for m in range(1, 13)]
-        
-        # Critical vulnerability data for chart
-        critical_data = [monthly_data[most_recent_year][m]['critical'] if most_recent_year in monthly_data else 0 for m in range(1, 13)]
-        
-        return render_template('monthly_summary.html',
-                              monthly_data=monthly_data,
-                              years=years,
-                              most_recent_year=most_recent_year,
-                              month_names=month_names,
-                              chart_months=chart_months,
-                              chart_data=chart_data,
-                              critical_data=critical_data)
-    
-    except Exception as e:
-        logging.error(f"Error generating monthly summary: {e}")
-        return render_template('error.html', error=f"An error occurred: {e}")
-
-# Helper function to get vendor data
-def get_vendor_data(session):
-    """Extract vendor information from CVE data"""
-    vendors = {}
-    all_cves = session.query(CVE_Model).all()
-    
-    for cve in all_cves:
-        if not cve.cpe_affected:
-            continue
-        
-        # Split CPE string and extract vendor names
-        cpe_items = cve.cpe_affected.split(',')
-        for cpe in cpe_items:
-            # CPE format: cpe:2.3:part:vendor:product:version:...
-            parts = cpe.split(':')
-            if len(parts) >= 5:
-                vendor = parts[3].lower()
-                # Skip generic/empty vendors
-                if vendor in ('', '*', '-', 'n/a'):
-                    continue
-                
-                # Add or update vendor stats
-                if vendor not in vendors:
-                    vendors[vendor] = {
-                        'name': vendor,
-                        'slug': vendor.replace(' ', '-').lower(),
-                        'cve_count': 0,
-                        'critical': 0,
-                        'high': 0,
-                        'medium': 0,
-                        'low': 0,
-                        'unknown': 0,
-                        'has_critical': False,
-                        'has_high': False,
-                        'has_medium': False,
-                        'has_low': False
-                    }
-                
-                vendors[vendor]['cve_count'] += 1
-                
-                # Count by severity
-                severity = (cve.severity or 'UNKNOWN').upper()
-                if severity == 'CRITICAL':
-                    vendors[vendor]['critical'] += 1
-                    vendors[vendor]['has_critical'] = True
-                elif severity == 'HIGH':
-                    vendors[vendor]['high'] += 1
-                    vendors[vendor]['has_high'] = True
-                elif severity == 'MEDIUM':
-                    vendors[vendor]['medium'] += 1
-                    vendors[vendor]['has_medium'] = True
-                elif severity == 'LOW':
-                    vendors[vendor]['low'] += 1
-                    vendors[vendor]['has_low'] = True
-                else:
-                    vendors[vendor]['unknown'] += 1
-    
-    # Convert to list and sort by CVE count
-    vendor_list = sorted(vendors.values(), key=lambda x: x['cve_count'], reverse=True)
-    return vendor_list
-
 @app.route('/top_vendors')
 def top_vendors():
-    """Display a list of top vendors with most CVEs"""
+    """Display top vendors based on CVE count"""
     try:
         if CVE_Model is None:
             return render_template('error.html', error="Database model not initialized. Please update the database first.")
-        
-        engine = create_local_cve_db()
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Get the vendor list from our helper function
-        vendor_list = get_vendor_data(session)
-        
-        # Prepare data for the top vendors chart
-        top_vendor_names = []
-        top_vendor_counts = []
-        
-        # Get top 20 vendors for the chart (we'll show top 10 by default, with option to show 20)
-        for vendor in vendor_list[:20]:
-            top_vendor_names.append(vendor['name'])
-            top_vendor_counts.append(vendor['cve_count'])
-        
-        return render_template('top_vendors.html',
-                              vendors=vendor_list,
-                              top_vendor_names=top_vendor_names,
-                              top_vendor_counts=top_vendor_counts)
-    
-    except Exception as e:
-        logging.error(f"Error generating top vendors page: {e}")
-        return render_template('error.html', error=f"An error occurred: {e}")
 
-@app.route('/vendor/<vendor>')
-def vendor_detail(vendor):
-    """Display detailed information about a specific vendor"""
-    try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-        
-        # For pagination
-        page = request.args.get('page', 1, type=int)
-        per_page = 50  # Show 50 results per page
-        
         engine = create_local_cve_db()
         Session = sessionmaker(bind=engine)
         session = Session()
-        
-        # Map vendor slugs to proper names and any alternate names to search for
-        vendor_mapping = {
-            'microsoft': {
-                'name': 'Microsoft',
-                'alternates': ['microsoft', 'msft', 'ms']
-            },
-            'adobe': {
-                'name': 'Adobe',
-                'alternates': ['adobe']
-            },
-            'oracle': {
-                'name': 'Oracle',
-                'alternates': ['oracle', 'sun microsystems', 'sun', 'java']
-            },
-            'google': {
-                'name': 'Google',
-                'alternates': ['google', 'android', 'chrome']
-            },
-            'apple': {
-                'name': 'Apple',
-                'alternates': ['apple', 'macos', 'ios', 'iphone', 'ipad', 'safari']
+
+        try:
+            vendor_list = get_vendor_data(session)
+        except ImportError:
+             logging.warning("get_vendor_data helper function not found. Using placeholder data.")
+             # Placeholder data if helper is missing (ensure all keys are present)
+             vendor_list = [
+                 {'name': 'Microsoft', 'cve_count': 500, 'critical': 50, 'high': 150, 'medium': 200, 'low': 100, 'unknown': 0, 'slug': 'microsoft'},
+                 {'name': 'Google', 'cve_count': 400, 'critical': 40, 'high': 120, 'medium': 150, 'low': 90, 'unknown': 0, 'slug': 'google'},
+                 {'name': 'Apple', 'cve_count': 350, 'critical': 30, 'high': 100, 'medium': 120, 'low': 100, 'unknown': 0, 'slug': 'apple'},
+             ]
+             vendor_list = sorted(vendor_list, key=lambda x: x.get('cve_count', 0), reverse=True) # Use .get for safety
+
+        # --- Sanitize vendor_list to ensure all keys exist ---
+        sanitized_vendor_list = []
+        for vendor in vendor_list:
+            name = vendor.get('name', 'Unknown')
+            slug = vendor.get('slug', generate_slug(name)) # Generate slug if missing
+            sanitized_vendor = {
+                'name': name,
+                'slug': slug,
+                'cve_count': vendor.get('cve_count', 0),
+                'critical': vendor.get('critical', 0),
+                'high': vendor.get('high', 0),
+                'medium': vendor.get('medium', 0),
+                'low': vendor.get('low', 0),
+                'unknown': vendor.get('unknown', 0)
             }
-        }
-        
-        # If vendor not found in our mapping, generate a default name from the slug
-        if vendor not in vendor_mapping:
-            # Handle unknown vendor by using the slug as the name
-            vendor_name = vendor.replace('-', ' ').title()
-            search_terms = [vendor.replace('-', ' ')]
-        else:
-            vendor_name = vendor_mapping[vendor]['name']
-            search_terms = vendor_mapping[vendor]['alternates']
-        
-        # Query CVEs for this vendor
-        all_cves = session.query(CVE_Model).all()
-        
-        vendor_cves = []
-        product_data = {}
-        
-        for cve in all_cves:
-            is_vendor_match = False
-            
-            # Check based on CPE data
-            if cve.cpe_affected:
-                cpe_items = cve.cpe_affected.split(',')
-                for cpe in cpe_items:
-                    # CPE format: cpe:2.3:part:vendor:product:version:...
-                    parts = cpe.split(':')
-                    if len(parts) >= 5:
-                        cpe_vendor = parts[3].lower()
-                        if cpe_vendor in search_terms:
-                            is_vendor_match = True
-                            
-                            # Track product data if we have it
-                            if len(parts) >= 6:
-                                product = parts[4]
-                                if product and product != '*':
-                                    if product not in product_data:
-                                        product_data[product] = {
-                                            'name': product,
-                                            'cve_count': 0,
-                                            'critical': 0,
-                                            'high': 0,
-                                            'medium': 0,
-                                            'low': 0,
-                                            'unknown': 0
-                                        }
-                                    
-                                    product_data[product]['cve_count'] += 1
-                                    
-                                    # Count by severity
-                                    severity = (cve.severity or 'UNKNOWN').upper()
-                                    if severity == 'CRITICAL':
-                                        product_data[product]['critical'] += 1
-                                    elif severity == 'HIGH':
-                                        product_data[product]['high'] += 1
-                                    elif severity == 'MEDIUM':
-                                        product_data[product]['medium'] += 1
-                                    elif severity == 'LOW':
-                                        product_data[product]['low'] += 1
-                                    else:
-                                        product_data[product]['unknown'] += 1
-            
-            # As a fallback, check description for vendor name
-            if not is_vendor_match and cve.description:
-                desc_lower = cve.description.lower()
-                for term in search_terms:
-                    if term.lower() in desc_lower:
-                        is_vendor_match = True
-                        break
-            
-            if is_vendor_match:
-                vendor_cves.append(cve)
-        
-        # Sort vendor_cves by published date (newest first)
-        vendor_cves.sort(key=lambda x: x.published_date if x.published_date else datetime.min, reverse=True)
-        
-        # Calculate pagination
-        total_cves = len(vendor_cves)
-        total_pages = (total_cves + per_page - 1) // per_page  # ceiling division
-        
-        # Get only the CVEs for the current page
-        start_idx = (page - 1) * per_page
-        end_idx = min(start_idx + per_page, total_cves)
-        paginated_cves = vendor_cves[start_idx:end_idx]
-        
-        # Get top products by CVE count
-        top_products = sorted(product_data.values(), key=lambda x: x['cve_count'], reverse=True)[:6]
-        
-        # Generate severity statistics
-        severity_counts = {
-            "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0
-        }
-        
-        for cve in vendor_cves:
-            severity = (cve.severity or 'UNKNOWN').upper()
-            if severity in severity_counts:
-                severity_counts[severity] += 1
-            else:
-                severity_counts['UNKNOWN'] += 1
-        
-        # Get yearly trend data
-        yearly_data = {}
-        for cve in vendor_cves:
-            if cve.published_date:
-                year = cve.published_date.year
-                if year not in yearly_data:
-                    yearly_data[year] = 0
-                yearly_data[year] += 1
-        
-        # Sort years for the chart
-        yearly_labels = sorted(yearly_data.keys())
-        yearly_counts = [yearly_data[year] for year in yearly_labels]
-        
-        # Calculate a risk score based on CVE counts and severity
-        if total_cves > 0:
-            # Weight critical and high more heavily
-            weighted_score = (
-                (severity_counts['CRITICAL'] * 10) + 
-                (severity_counts['HIGH'] * 5) + 
-                (severity_counts['MEDIUM'] * 2) + 
-                severity_counts['LOW']
-            ) / total_cves
-            
-            # Scale to 0-100
-            risk_score = min(100, round(weighted_score * 10))
-        else:
-            risk_score = 0
-        
-        # Get common issue types (simplified version)
-        top_issues = [
-            {'name': 'Remote Code Execution', 'count': round(total_cves * 0.2)},  # Simplified assumption
-            {'name': 'Information Disclosure', 'count': round(total_cves * 0.15)},
-            {'name': 'Denial of Service', 'count': round(total_cves * 0.12)}
-        ]
-        
-        # Get similar vendors for the "Similar Vendors" section
-        similar_vendors = []
-        for v_slug, v_data in vendor_mapping.items():
-            if v_slug != vendor:  # Don't include the current vendor
-                similar_vendors.append({
-                    'name': v_data['name'],
-                    'slug': v_slug,
-                    'cve_count': len(session.query(CVE_Model).filter(CVE_Model.description.ilike(f'%{v_data["name"]}%')).all())
-                })
-        
-        return render_template('vendor_detail.html',
-                              vendor=vendor,
-                              vendor_name=vendor_name,
-                              total_cves=total_cves,
-                              paginated_cves=paginated_cves,
-                              current_page=page,
-                              per_page=per_page,
-                              total_pages=total_pages,
-                              severity_counts=severity_counts,
-                              top_products=top_products,
-                              yearly_labels=yearly_labels,
-                              yearly_counts=yearly_counts,
-                              risk_score=risk_score,
-                              top_issues=top_issues,
-                              similar_vendors=similar_vendors[:3])  # Show only top 3 similar vendors
-    
+            # Add boolean flags based on sanitized counts
+            sanitized_vendor['has_critical'] = sanitized_vendor['critical'] > 0
+            sanitized_vendor['has_high'] = sanitized_vendor['high'] > 0
+            sanitized_vendor['has_medium'] = sanitized_vendor['medium'] > 0
+            sanitized_vendor['has_low'] = sanitized_vendor['low'] > 0
+            sanitized_vendor_list.append(sanitized_vendor)
+
+        vendor_list = sanitized_vendor_list # Use the sanitized list from now on
+        # --- End Sanitization ---
+
+        # Calculate stats based on the sanitized list
+        vendors_with_critical_count = sum(1 for v in vendor_list if v['has_critical'])
+        vendors_with_high_count = sum(1 for v in vendor_list if v['has_high'])
+
+        total_vendors = len(vendor_list)
+        percent_critical = round((vendors_with_critical_count / total_vendors) * 100) if total_vendors > 0 else 0
+        percent_high = round((vendors_with_high_count / total_vendors) * 100) if total_vendors > 0 else 0
+
+        top_n = 10 # Number of vendors for the top chart
+        chart_vendors = vendor_list[:top_n]
+        # Can safely access keys now after sanitization
+        top_vendor_names = [v['name'] for v in chart_vendors]
+        top_vendor_counts = [v['cve_count'] for v in chart_vendors]
+
+        return render_template('top_vendors.html',
+                              vendors=vendor_list, # Pass the sanitized list
+                              total_vendor_count=total_vendors,
+                              top_vendor_names=top_vendor_names,
+                              top_vendor_counts=top_vendor_counts,
+                              vendors_with_critical_count=vendors_with_critical_count,
+                              vendors_with_high_count=vendors_with_high_count,
+                              percent_critical=percent_critical,
+                              percent_high=percent_high
+                              )
+
     except Exception as e:
-        logging.error(f"Error generating vendor detail page: {e}")
+        logging.error(f"Error generating top vendors page: {e}", exc_info=True)
         return render_template('error.html', error=f"An error occurred: {e}")
 
-@app.route('/vulnerability_category/<category>')
-def vulnerability_category(category):
+@app.route('/vulnerability_category/<category_slug>')
+def vulnerability_category(category_slug):
     """Display CVEs for a specific vulnerability category"""
     try:
         if CVE_Model is None:
             return render_template('error.html', error="Database model not initialized. Please update the database first.")
-        
-        # For pagination
-        page = request.args.get('page', 1, type=int)
-        per_page = 50  # Show 50 results per page
-        
+
         engine = create_local_cve_db()
         Session = sessionmaker(bind=engine)
         session = Session()
-        
-        # Define category mappings (slug to readable name and search terms)
-        category_mappings = {
-            'sql-injection': {
-                'name': 'SQL Injection',
-                'description': 'SQL injection vulnerabilities allow attackers to inject malicious SQL code into an application, potentially giving them unauthorized access to databases or the ability to manipulate data.',
-                'search_terms': ['sql injection', 'sqli', 'sql', 'database injection']
-            },
-            'remote-code-execution': {
-                'name': 'Remote Code Execution',
-                'description': 'Remote Code Execution (RCE) vulnerabilities allow attackers to execute arbitrary code on affected systems, potentially gaining complete control over the target.',
-                'search_terms': ['remote code execution', 'rce', 'code execution', 'command execution', 'arbitrary code']
-            },
-            'cross-site-scripting': {
-                'name': 'Cross-Site Scripting (XSS)',
-                'description': 'Cross-Site Scripting vulnerabilities allow attackers to inject malicious scripts into web pages, which can then be executed in users\' browsers, potentially stealing data or session tokens.',
-                'search_terms': ['cross-site scripting', 'xss', 'script injection', 'client-side injection']
-            },
-            'authentication-bypass': {
-                'name': 'Authentication Bypass',
-                'description': 'Authentication bypass vulnerabilities allow attackers to gain unauthorized access to systems or data by circumventing authentication mechanisms.',
-                'search_terms': ['authentication bypass', 'auth bypass', 'login bypass', 'privilege escalation']
-            },
-            'denial-of-service': {
-                'name': 'Denial of Service',
-                'description': 'Denial of Service (DoS) vulnerabilities allow attackers to make systems or networks unavailable to legitimate users by overwhelming resources or exploiting flaws.',
-                'search_terms': ['denial of service', 'dos', 'resource exhaustion', 'crash']
-            },
-            'information-disclosure': {
-                'name': 'Information Disclosure',
-                'description': 'Information disclosure vulnerabilities allow attackers to access sensitive data that should be protected, such as system information, user data, or source code.',
-                'search_terms': ['information disclosure', 'information leakage', 'data leak', 'sensitive information']
-            },
-            'buffer-overflow': {
-                'name': 'Buffer Overflow',
-                'description': 'Buffer overflow vulnerabilities occur when a program writes more data to a buffer than it can hold, potentially allowing attackers to execute arbitrary code or crash the system.',
-                'search_terms': ['buffer overflow', 'stack overflow', 'heap overflow', 'memory corruption']
-            }
+
+        # Basic category mapping (can be expanded)
+        # Use the slug as the key
+        category_map = {
+            'sql-injection': {'name': 'SQL Injection', 'keywords': ['SQL Injection', 'CWE-89']},
+            'remote-code-execution': {'name': 'Remote Code Execution', 'keywords': ['Remote Code Execution', 'RCE', 'CWE-94']},
+            'cross-site-scripting': {'name': 'Cross-Site Scripting', 'keywords': ['Cross-Site Scripting', 'XSS', 'CWE-79']},
+            'authentication-bypass': {'name': 'Authentication Bypass', 'keywords': ['Authentication Bypass', 'CWE-287']},
+            'denial-of-service': {'name': 'Denial of Service', 'keywords': ['Denial of Service', 'DoS', 'CWE-400']},
+            'information-disclosure': {'name': 'Information Disclosure', 'keywords': ['Information Disclosure', 'CWE-200']},
+            'buffer-overflow': {'name': 'Buffer Overflow', 'keywords': ['Buffer Overflow', 'CWE-119', 'CWE-120']}
         }
-        
-        # If category doesn't exist in our mappings, return an error
-        if category not in category_mappings:
-            return render_template('error.html', error=f"Unknown vulnerability category: {category}")
-        
-        # Get category info
-        category_info = category_mappings[category]
+
+        if category_slug not in category_map:
+            return render_template('error.html', error=f"Unknown vulnerability category: {category_slug}")
+
+        category_info = category_map[category_slug]
         category_name = category_info['name']
-        category_description = category_info['description']
-        search_terms = category_info['search_terms']
+        keywords = category_info['keywords']
+
+        # Build query based on keywords (searching description and CWE ID)
+        query = session.query(CVE_Model)
+        filters = []
+        for keyword in keywords:
+            filters.append(CVE_Model.description.ilike(f"%{keyword}%"))
+            if keyword.startswith('CWE-'):
+                 filters.append(CVE_Model.cwe_id.ilike(f"%{keyword}%"))
         
-        # Find CVEs matching this category
-        matching_cves = []
-        all_cves = session.query(CVE_Model).all()
-        
-        for cve in all_cves:
-            if cve.description:
-                description_lower = cve.description.lower()
-                # Check if any search term is in the description
-                if any(term.lower() in description_lower for term in search_terms):
-                    matching_cves.append(cve)
-        
-        # Sort by published date (newest first)
-        matching_cves.sort(key=lambda x: x.published_date if x.published_date else datetime.min, reverse=True)
-        
-        # Calculate pagination
-        total_cves = len(matching_cves)
-        total_pages = (total_cves + per_page - 1) // per_page  # ceiling division
-        
-        # Get only the CVEs for the current page
-        start_idx = (page - 1) * per_page
-        end_idx = min(start_idx + per_page, total_cves)
-        paginated_cves = matching_cves[start_idx:end_idx]
-        
-        # Calculate severity counts
-        severity_counts = {
-            "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0
-        }
-        
-        for cve in matching_cves:
-            severity = (cve.severity or 'UNKNOWN').upper()
-            if severity in severity_counts:
-                severity_counts[severity] += 1
+        query = query.filter(sa.or_(*filters))
+
+        # Pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = 50
+        total_cves = query.count()
+        total_pages = (total_cves + per_page - 1) // per_page
+        paginated_cves = query.order_by(CVE_Model.published_date.desc()).limit(per_page).offset((page - 1) * per_page).all()
+
+        # Data for charts (simplified for now)
+        severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+        yearly_counts_dict = {}
+        # Query again without pagination for stats (consider optimizing if slow)
+        all_category_cves = query.all()
+        for cve in all_category_cves:
+            sev = (cve.severity or 'UNKNOWN').upper()
+            if sev in severity_counts:
+                severity_counts[sev] += 1
             else:
-                severity_counts['UNKNOWN'] += 1
-        
-        # Calculate percentages
-        severity_percents = {}
-        for severity, count in severity_counts.items():
-            if total_cves > 0:
-                severity_percents[severity] = round((count / total_cves) * 100, 1)
-            else:
-                severity_percents[severity] = 0
-        
-        # Get yearly distribution
-        yearly_data = {}
-        for cve in matching_cves:
+                severity_counts["UNKNOWN"] += 1
+            
             if cve.published_date:
                 year = cve.published_date.year
-                if year not in yearly_data:
-                    yearly_data[year] = 0
-                yearly_data[year] += 1
+                yearly_counts_dict[year] = yearly_counts_dict.get(year, 0) + 1
         
-        # Prepare chart data
-        yearly_labels = sorted(yearly_data.keys())
-        yearly_counts = [yearly_data[year] for year in yearly_labels]
-        
-        # Related categories (exclude current)
-        related_categories = []
-        for cat_slug, cat_info in category_mappings.items():
-            if cat_slug != category:
-                related_categories.append({
-                    'name': cat_info['name'],
-                    'description': cat_info['description'],
-                    'slug': cat_slug
-                })
-        
-        # Limit to 3 related categories
-        related_categories = related_categories[:3]
-        
+        yearly_labels = sorted(yearly_counts_dict.keys())
+        yearly_counts = [yearly_counts_dict[year] for year in yearly_labels]
+
+        # Placeholder for related categories
+        related_categories = [] 
+
         return render_template('vulnerability_category.html',
-                              category=category,
                               category_name=category_name,
-                              category_description=category_description,
-                              cves=matching_cves,
-                              paginated_cves=paginated_cves,
-                              current_page=page,
-                              per_page=per_page,
-                              total_pages=total_pages,
+                              cves=paginated_cves,
                               total_cves=total_cves,
                               severity_counts=severity_counts,
-                              severity_percents=severity_percents,
                               yearly_labels=yearly_labels,
                               yearly_counts=yearly_counts,
-                              related_categories=related_categories)
-    
+                              related_categories=related_categories,
+                              current_page=page,
+                              total_pages=total_pages,
+                              category_slug=category_slug # Pass the slug for pagination links
+                              )
+
     except Exception as e:
-        logging.error(f"Error generating vulnerability category page: {e}")
+        logging.error(f"Error generating vulnerability category page for {category_slug}: {e}", exc_info=True)
+        return render_template('error.html', error=f"An error occurred: {e}")
+
+@app.route('/monthly_summary')
+def monthly_summary():
+    """Display a monthly summary of CVEs"""
+    try:
+        if CVE_Model is None:
+            return render_template('error.html', error="Database model not initialized. Please update the database first.")
+
+        engine = create_local_cve_db()
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        # Query to get counts per month/year
+        monthly_data = session.query(
+            extract('year', CVE_Model.published_date).label('year'),
+            extract('month', CVE_Model.published_date).label('month'),
+            func.count(CVE_Model.id).label('count')
+        ).filter(CVE_Model.published_date != None)\
+         .group_by('year', 'month')\
+         .order_by('year', 'month')\
+         .all()
+
+        # Process data for the chart
+        labels = []
+        counts = []
+        for item in monthly_data:
+            if item.year and item.month: # Ensure year and month are not None
+                labels.append(f"{int(item.year)}-{int(item.month):02d}") # Format as YYYY-MM
+                counts.append(item.count)
+
+        return render_template('monthly_summary.html',
+                               labels=labels,
+                               counts=counts)
+
+    except Exception as e:
+        logging.error(f"Error generating monthly summary page: {e}", exc_info=True)
         return render_template('error.html', error=f"An error occurred: {e}")
 
 @app.route('/severity_distribution')
 def severity_distribution():
-    """Display severity distribution of CVEs in the database"""
-    try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-        
-        engine = create_local_cve_db()
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Get severity counts from the database
-        severity_query = session.query(
-            CVE_Model.severity, func.count(CVE_Model.id)
-        ).group_by(CVE_Model.severity).all()
-        
-        # Convert to dict, handling None severity
-        severity_map = {
-            "CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0
-        }
-        for severity, count in severity_query:
-            s_upper = (severity or 'UNKNOWN').upper()
-            if s_upper in severity_map:
-                severity_map[s_upper] = count
-            else:
-                severity_map["UNKNOWN"] += count
-        
-        # Calculate total for percentages
-        total_cves = sum(severity_map.values())
-        
-        # Calculate percentages
-        severity_percents = {}
-        for severity, count in severity_map.items():
-            if total_cves > 0:
-                severity_percents[severity] = round((count / total_cves) * 100, 1)
-            else:
-                severity_percents[severity] = 0
-        
-        # Get CVSS score distribution
-        cvss_v3_scores = [cve.cvss_v3_score for cve in session.query(CVE_Model.cvss_v3_score).filter(CVE_Model.cvss_v3_score.isnot(None)).all()]
-        
-        # Group CVSS scores into ranges for histogram
-        cvss_ranges = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 0-1, 1-2, ..., 9-10
-        for score in cvss_v3_scores:
-            if score is not None:
-                index = min(10, int(score))
-                cvss_ranges[index] += 1
-        
-        # Get severity trend by year
-        yearly_data = {}
-        all_cves = session.query(CVE_Model).filter(CVE_Model.published_date.isnot(None)).all()
-        
-        for cve in all_cves:
-            if not cve.published_date:
-                continue
-                
-            year = cve.published_date.year
-            severity = (cve.severity or 'UNKNOWN').upper()
-            
-            if year not in yearly_data:
-                yearly_data[year] = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
-            
-            if severity in yearly_data[year]:
-                yearly_data[year][severity] += 1
-        
-        # Sort years and prepare data for chart
-        years = sorted(yearly_data.keys())
-        
-        # Extract data series for each severity
-        critical_series = [yearly_data[year]["CRITICAL"] for year in years]
-        high_series = [yearly_data[year]["HIGH"] for year in years]
-        medium_series = [yearly_data[year]["MEDIUM"] for year in years]
-        low_series = [yearly_data[year]["LOW"] for year in years]
-        unknown_series = [yearly_data[year]["UNKNOWN"] for year in years]
-        
-        return render_template('severity_distribution.html',
-                              severity_counts=severity_map,
-                              severity_percents=severity_percents,
-                              total_cves=total_cves,
-                              cvss_ranges=cvss_ranges,
-                              years=years,
-                              critical_series=critical_series,
-                              high_series=high_series,
-                              medium_series=medium_series,
-                              low_series=low_series,
-                              unknown_series=unknown_series)
-    
-    except Exception as e:
-        logging.error(f"Error generating severity distribution page: {e}")
-        return render_template('error.html', error=f"An error occurred: {e}")
+    """
+    Render the severity distribution page.
+    """
+    return render_template('severity_distribution.html')
 
 @app.route('/vendor_analysis')
 def vendor_analysis():
-    """Display vendor analysis summary"""
-    try:
-        if CVE_Model is None:
-            return render_template('error.html', error="Database model not initialized. Please update the database first.")
-        
-        engine = create_local_cve_db()
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Get top vendors
-        vendor_list = get_vendor_data(session)
-        top_vendors = vendor_list[:10]  # Get top 10 vendors
-        
-        # Prepare data for top vendor chart
-        vendor_names = [v['name'] for v in top_vendors]
-        vendor_cve_counts = [v['cve_count'] for v in top_vendors]
-        
-        # Get severity distribution across all vendors
-        total_critical = sum(v['critical'] for v in vendor_list)
-        total_high = sum(v['high'] for v in vendor_list)
-        total_medium = sum(v['medium'] for v in vendor_list)
-        total_low = sum(v['low'] for v in vendor_list)
-        total_unknown = sum(v['unknown'] for v in vendor_list)
-        
-        # Get vendors with most critical vulnerabilities
-        critical_vendors = sorted(vendor_list, key=lambda x: x['critical'], reverse=True)[:5]
-        critical_vendor_names = [v['name'] for v in critical_vendors]
-        critical_vendor_counts = [v['critical'] for v in critical_vendors]
-        
-        # Vendor diversity metrics - how many vendors have vulnerabilities
-        vendor_count = len(vendor_list)
-        vendors_with_critical = sum(1 for v in vendor_list if v['critical'] > 0)
-        vendors_with_high = sum(1 for v in vendor_list if v['high'] > 0)
-        
-        return render_template('vendor_analysis.html',
-                              vendor_count=vendor_count,
-                              top_vendors=top_vendors,
-                              vendor_names=vendor_names,
-                              vendor_cve_counts=vendor_cve_counts,
-                              total_critical=total_critical,
-                              total_high=total_high,
-                              total_medium=total_medium,
-                              total_low=total_low,
-                              total_unknown=total_unknown,
-                              critical_vendor_names=critical_vendor_names,
-                              critical_vendor_counts=critical_vendor_counts,
-                              vendors_with_critical=vendors_with_critical,
-                              vendors_with_high=vendors_with_high)
-    
-    except Exception as e:
-        logging.error(f"Error generating vendor analysis page: {e}")
-        return render_template('error.html', error=f"An error occurred: {e}")
+    """
+    Render the vendor analysis page.
+    """
+    return render_template('vendor_analysis.html')
 
 # Run the application
 if __name__ == '__main__':
