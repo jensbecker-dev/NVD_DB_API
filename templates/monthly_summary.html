@@ -345,8 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const prevYear = year - 1;
         const prevYearData = allMonthlyData[prevYear] ? getMonthDataForYear(prevYear) : null;
 
-        // Display months from latest (December) to earliest (January)
-        for (let i = 11; i >= 0; i--) {
+        // Display months from earliest (January) to latest (December)
+        for (let i = 0; i <= 11; i++) { // Loop Jan to Dec
             const monthNum = i + 1;
             const monthData = yearData[i];
             const currentCount = monthData.count || 0;
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="pe-3 text-end">${trendHtml}</td>
                 </tr>
             `;
-            monthlyDataBody.insertAdjacentHTML('beforeend', row); // More efficient than innerHTML +=
+            monthlyDataBody.insertAdjacentHTML('afterbegin', row); // Insert at the beginning to reverse order
         }
         // Update badges
         if(tableYearBadge) tableYearBadge.textContent = year;
