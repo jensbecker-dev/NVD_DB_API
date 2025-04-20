@@ -10,6 +10,8 @@ from datetime import datetime
 import threading
 import calendar
 from werkzeug.routing.exceptions import BuildError
+from functools import lru_cache
+import hashlib
 
 # Note: The 'RequestsDependencyWarning' suggests installing 'chardet' or 'charset_normalizer'
 # for optimal character encoding detection by the requests library (likely used in nvdapi.py).
@@ -107,32 +109,30 @@ def get_session(engine):
     return Session()
 
 def create_cve_table(engine):
-    """
-    Create the CVE table in the database.
-    
-    Args:
-        engine: SQLAlchemy engine object
-        
-    Returns:
-        CVE class for table operations
-    """
+    """Create the CVE table in the database with optimized indexes."""
     try:
         class CVE(Base):
             __tablename__ = 'cves'
             
             # Add extend_existing=True to handle multiple definitions
-            __table_args__ = {'extend_existing': True}
+            __table_args__ = {
+                'extend_existing': True,
+                # Add composite indexes for common queries
+                'sqlite_autoincrement': True, 
+                'mysql_engine': 'InnoDB',
+                'mysql_charset': 'utf8mb4'
+            }
             
             id = sa.Column(sa.Integer, primary_key=True)
             cve_id = sa.Column(sa.String(20), unique=True, index=True)
-            published_date = sa.Column(sa.DateTime)
+            published_date = sa.Column(sa.DateTime, index=True)  # Add index
             last_modified_date = sa.Column(sa.DateTime)
             description = sa.Column(sa.Text)
             cvss_v3_score = sa.Column(sa.Float, nullable=True)
             cvss_v2_score = sa.Column(sa.Float, nullable=True)
-            severity = sa.Column(sa.String(20), nullable=True)
+            severity = sa.Column(sa.String(20), nullable=True, index=True)  # Add index
             cpe_affected = sa.Column(sa.Text)
-            cwe_id = sa.Column(sa.String(50), nullable=True)
+            cwe_id = sa.Column(sa.String(50), nullable=True, index=True)  # Add index
             references = sa.Column(sa.Text)
             
         Base.metadata.create_all(engine)
@@ -278,6 +278,28 @@ def import_cve_data_to_db(cve_list, engine, CVE):
         logging.error(f"Error importing CVE data to database: {e}")
         return 0
 
+# Add caching for expensive operations
+@lru_cache(maxsize=32)
+def get_severity_distribution(cache_key=None):
+    """Cached function to get severity distribution statistics"""
+    engine = create_local_cve_db()
+    session = get_session(engine)
+    
+    try:
+        severity_query = session.query(
+            CVE_Model.severity, func.count(CVE_Model.id).label('count')
+        ).group_by(CVE_Model.severity).all()
+        
+        severity_map = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
+        for severity, count in severity_query:
+            s_upper = (severity or 'UNKNOWN').upper()
+            if s_upper in severity_map:
+                severity_map[s_upper] = count
+                
+        return severity_map, sum(severity_map.values())
+    finally:
+        session.close()
+
 # Global variable to track database update status
 db_update_status = {
     'is_updating': False,
@@ -331,6 +353,8 @@ CVE_Model = None
 @app.route('/index')
 def index():
     """Home page showing overview and search form"""
+    # Get cached severity counts
+    severity_counts, total_cve_count = get_severity_distribution()
     # Force logo update on home page by adding a timestamp to prevent caching issues
     logo_timestamp = int(datetime.now().timestamp())
     results = []
@@ -338,7 +362,6 @@ def index():
     search_performed = request.args.get('search_performed', 'false').lower() == 'true'
     exploitable_only = request.args.get('exploitable', 'false').lower() == 'true'
     severity_filter = request.args.get('severity', '')
-    severity_counts = {}
     page = request.args.get('page', 1, type=int)
     per_page = 100
 
@@ -348,18 +371,6 @@ def index():
 
         if CVE_Model is None:
             return render_template('index.html', error_message="Database model not initialized. Please update the database first.", results=[], search_term=search_term, search_performed=search_performed, severity_counts={}, total_cve_count=0)
-
-        # Calculate severity counts
-        severity_query = session.query(
-            CVE_Model.severity, func.count(CVE_Model.id)
-        ).group_by(CVE_Model.severity).all()
-
-        severity_map = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
-        for severity, count in severity_query:
-            s_upper = (severity or 'UNKNOWN').upper()
-            severity_map[s_upper] = count
-        severity_counts = severity_map
-        total_cve_count = sum(severity_counts.values())
 
         if request.method == 'POST':
             search_performed = True
