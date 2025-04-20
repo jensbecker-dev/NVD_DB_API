@@ -6,6 +6,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import func, extract, case
 from flask import Flask, render_template, request, jsonify, redirect, url_for, json
 from modules.nvdapi import NVDApi, fetch_all_nvd_data, determine_severity
+from modules.db_update import enhanced_update_database_task, db_update_status as enhanced_status
 from datetime import datetime
 import threading
 import calendar
@@ -106,6 +107,8 @@ def create_cve_table(engine):
             cpe_affected = sa.Column(sa.Text)
             cwe_id = sa.Column(sa.String(50), nullable=True)
             references = sa.Column(sa.Text)
+            has_exploit = sa.Column(sa.Boolean, default=False)  # Flag for exploits
+            exploit_data = sa.Column(sa.Text)  # JSON data for exploits
             
         Base.metadata.create_all(engine)
         logging.info("CVE table created successfully")
@@ -176,6 +179,14 @@ def import_cve_data_to_db(cve_list, engine, CVE):
             # Check if CVE already exists in database
             existing_cve = session.query(CVE).filter_by(cve_id=cve_id).first()
             if existing_cve:
+                # Check if we need to update with exploit data
+                if 'has_exploit' in cve_item and not existing_cve.has_exploit:
+                    # Update existing record with exploit data
+                    if 'cve' in cve_item and 'exploit_data' in cve_item['cve']:
+                        existing_cve.has_exploit = True
+                        existing_cve.exploit_data = json.dumps(cve_item['cve']['exploit_data'])
+                        session.commit()
+                        logging.info(f"Updated {cve_id} with exploit data")
                 continue
                 
             # Extract basic CVE information
@@ -218,7 +229,13 @@ def import_cve_data_to_db(cve_list, engine, CVE):
             
             # Extract references
             reference_data = cve_item.get('cve', {}).get('references', {}).get('reference_data', [])
-            references = [ref.get('url') for ref in reference_data]
+            references = [ref.get('url') for ref in reference_data if ref.get('url')]
+            
+            # Check for exploit data
+            has_exploit = cve_item.get('has_exploit', False)
+            exploit_data = None
+            if 'cve' in cve_item and 'exploit_data' in cve_item['cve']:
+                exploit_data = json.dumps(cve_item['cve']['exploit_data'])
             
             # Create new CVE record
             new_cve = CVE(
@@ -231,7 +248,9 @@ def import_cve_data_to_db(cve_list, engine, CVE):
                 severity=severity,
                 cpe_affected=','.join(cpe_affected),
                 cwe_id=cwe_id,
-                references=','.join(references)
+                references=','.join(references),
+                has_exploit=has_exploit,
+                exploit_data=exploit_data
             )
             
             session.add(new_cve)
@@ -356,7 +375,7 @@ def index():
                 query = query.filter(CVE_Model.severity == severity_filter)
 
             if exploitable_only:
-                query = query.filter(CVE_Model.references.ilike('%exploit%'))
+                query = query.filter(CVE_Model.has_exploit == True)
 
             total_results = query.count()
             query = query.order_by(CVE_Model.published_date.desc())
@@ -824,6 +843,36 @@ def update_database():
     update_thread.start()
     
     return render_template('update_status.html', status=db_update_status)
+
+@app.route('/enhanced_update_database')
+def enhanced_update_database():
+    """
+    Update the local CVE database with latest data from all sources including:
+    1. NVD Feed (2002-present)
+    2. Historical CVE data (1992-2002)
+    3. Additional sources like CIRCL and MITRE
+    """
+    global enhanced_status
+    
+    if enhanced_status['is_updating']:
+        return render_template('update_status.html', status=enhanced_status, enhanced=True)
+    
+    # Reset/initialize status object
+    enhanced_status['is_updating'] = True
+    enhanced_status['progress'] = 0
+    enhanced_status['total_years'] = datetime.now().year - 1992 + 1
+    enhanced_status['current_year'] = None
+    enhanced_status['current_source'] = "Initializing"
+    enhanced_status['error'] = None
+    enhanced_status['cves_added'] = 0
+    enhanced_status['sources_processed'] = 0
+    
+    # Start update in background thread
+    update_thread = threading.Thread(target=enhanced_update_database_task)
+    update_thread.daemon = True
+    update_thread.start()
+    
+    return render_template('update_status.html', status=enhanced_status, enhanced=True)
 
 @app.route('/update_status')
 def check_update_status():

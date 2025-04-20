@@ -350,7 +350,10 @@
         <h5 class="section-title"><i class="bi bi-gear me-1"></i>Administration</h5>
         <div class="list-group list-group-flush">
             <a href="{{ url_for('update_database') }}" class="list-group-item list-group-item-action {% if request.path == url_for('update_database') %}active{% endif %}">
-                <i class="bi bi-arrow-repeat me-1"></i>Update Database
+                <i class="bi bi-arrow-repeat me-1"></i>Standard Update (2002+)
+            </a>
+            <a href="{{ url_for('enhanced_update_database') }}" class="list-group-item list-group-item-action {% if request.path == url_for('enhanced_update_database') %}active{% endif %}">
+                <i class="bi bi-stars me-1"></i>Enhanced Update (1992+)
             </a>
         </div>
     </div>

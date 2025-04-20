@@ -148,6 +148,79 @@
                 </div>
             </div>
 
+            <!-- Exploits Card -->
+            {% if cve.has_exploit %}
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-lightning-fill me-2 fs-5" style="color: #ff6d41;"></i>
+                    <h5 class="m-0">Exploits Available</h5>
+                    <span class="badge rounded-pill ms-2" style="background-color: #ff6d41;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Actively Exploited
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Warning:</strong> Public exploits exist for this vulnerability. Consider this vulnerability high priority for remediation.
+                    </div>
+                    
+                    <div class="exploits-list mt-3">
+                        {% if cve.exploit_data %}
+                            {% set exploit_list = cve.exploit_data|safe|trim|tojson|forceescape|safe %}
+                            <script>
+                                try {
+                                    var exploitData = JSON.parse({{ exploit_list }});
+                                    if (Array.isArray(exploitData)) {
+                                        exploitData.forEach(function(exploit) {
+                                            var exploitCard = document.createElement('div');
+                                            exploitCard.className = 'exploit-card p-3 mb-3 rounded border-start border-danger border-3';
+                                            exploitCard.style.backgroundColor = 'rgba(255, 109, 65, 0.1)';
+                                            
+                                            var content = '<div class="d-flex justify-content-between mb-2">' +
+                                                '<h6 class="mb-0">' + (exploit.description || 'Unnamed Exploit') + '</h6>' +
+                                                '<span class="badge bg-secondary">' + (exploit.type || 'Unknown Type') + '</span>' +
+                                                '</div>';
+                                            
+                                            content += '<div class="mb-2 small"><i class="bi bi-calendar3 me-1"></i> Published: ' + 
+                                                (exploit.date || 'Unknown') + '</div>';
+                                                
+                                            if (exploit.author) {
+                                                content += '<div class="mb-2 small"><i class="bi bi-person me-1"></i> Author: ' + 
+                                                    exploit.author + '</div>';
+                                            }
+                                            
+                                            if (exploit.platform) {
+                                                content += '<div class="mb-2 small"><i class="bi bi-cpu me-1"></i> Platform: ' + 
+                                                    exploit.platform + '</div>';
+                                            }
+                                            
+                                            if (exploit.exploit_id) {
+                                                content += '<div class="mt-3"><a href="https://www.exploit-db.com/exploits/' + 
+                                                    exploit.exploit_id + '" target="_blank" class="btn btn-sm btn-outline-danger">' +
+                                                    '<i class="bi bi-box-arrow-up-right me-1"></i>View Exploit on Exploit-DB</a></div>';
+                                            }
+                                            
+                                            exploitCard.innerHTML = content;
+                                            document.querySelector('.exploits-list').appendChild(exploitCard);
+                                        });
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing exploit data:', e);
+                                    document.querySelector('.exploits-list').innerHTML = 
+                                        '<div class="alert alert-warning">Error displaying exploit details</div>';
+                                }
+                            </script>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                Exploit information is available but details could not be loaded.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- References Card -->
             {% if cve.references %}
             <div class="card mb-4">
