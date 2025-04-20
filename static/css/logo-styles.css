@@ -1,7 +1,7 @@
-/* NVD DB Minimalist Professional Logo Styles - Optimized for Sidebar */
+/* NVD DB Premium Professional Logo Styles - Enhanced for Visual Impact */
 .nvd-logo-container {
     width: 100%; 
-    height: 140px; /* Optimierte Höhe für die Sidebar-Header */
+    height: 180px; /* Vergrößerte Höhe für mehr Impact */
     margin: 0 auto;
     position: relative;
     cursor: pointer;
@@ -10,127 +10,226 @@
     align-items: center;
     justify-content: center;
     transform-origin: center;
-    padding: 0; /* Kein Padding, um maximalen Platz zu nutzen */
-    transition: transform 0.2s ease;
+    padding: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Verbesserte Transition mit Bounce-Effekt */
 }
 
 .nvd-logo-container:hover {
-    transform: scale(1.03); /* Subtiler Hover-Effekt */
+    transform: scale(1.05); /* Stärkerer Hover-Effekt */
 }
 
 .nvd-logo-svg {
     width: 100%;
     height: 100%;
     overflow: visible;
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.15));
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
 }
 
 /* Main hexagon outer shape */
 .nvd-logo-main-shape {
     fill: url(#primaryGradient);
-    stroke: rgba(255, 255, 255, 0.1);
-    stroke-width: 1;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    transition: all 0.3s ease;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 1.5;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
 .nvd-logo-active .nvd-logo-main-shape {
-    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.35));
+    stroke: rgba(255, 255, 255, 0.25);
 }
 
-/* Inner hexagon layer - subtle variation */
+/* Inner hexagon layer - enhanced styling */
 .nvd-logo-inner-shape {
     fill: url(#secondaryGradient);
-    stroke: rgba(255, 255, 255, 0.05);
-    stroke-width: 0.5;
-    transition: all 0.3s ease;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1;
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
 .nvd-logo-active .nvd-logo-inner-shape {
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1));
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
+    transform: rotate(2deg) scale(1.02);
 }
 
-/* Database styling - professional and clean */
+/* Database styling - enhanced for visual impact */
 .nvd-logo-database-body {
     fill: rgba(255, 255, 255, 0.15);
-    stroke: rgba(255, 255, 255, 0.3);
-    stroke-width: 0.5;
-    transition: all 0.3s ease;
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 1;
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
 .nvd-logo-active .nvd-logo-database-body {
-    fill: rgba(255, 255, 255, 0.2);
+    fill: rgba(255, 255, 255, 0.25);
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
 }
 
 .nvd-logo-database-top, .nvd-logo-database-segment {
-    fill: rgba(255, 255, 255, 0.15);
-    stroke: rgba(255, 255, 255, 0.3);
-    stroke-width: 0.5;
-    transition: all 0.3s ease;
+    fill: rgba(255, 255, 255, 0.2);
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 1;
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
 .nvd-logo-active .nvd-logo-database-top,
 .nvd-logo-active .nvd-logo-database-segment {
-    fill: rgba(255, 255, 255, 0.2);
+    fill: rgba(255, 255, 255, 0.3);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-/* Data line styling - minimal */
+/* Data line styling - enhanced */
 .nvd-logo-data-line {
-    stroke: rgba(255, 255, 255, 0.4);
-    stroke-width: 0.75;
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 1.25;
     fill: none;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
+    stroke-dasharray: 30;
+    stroke-dashoffset: 30;
 }
 
 .nvd-logo-active .nvd-logo-data-line {
-    stroke: rgba(255, 255, 255, 0.6);
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-dashoffset: 0;
 }
 
-/* Shield symbol - representing security */
+/* Shield symbol - improved */
 .nvd-logo-shield {
-    fill: rgba(255, 255, 255, 0.08);
-    stroke: rgba(255, 255, 255, 0.3);
-    stroke-width: 0.5;
-    transition: all 0.3s ease;
+    fill: rgba(255, 255, 255, 0.1);
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-width: 1;
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
 .nvd-logo-active .nvd-logo-shield {
-    fill: rgba(255, 255, 255, 0.12);
-    stroke: rgba(255, 255, 255, 0.4);
+    fill: rgba(255, 255, 255, 0.2);
+    stroke: rgba(255, 255, 255, 0.6);
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
 }
 
-/* Logo initialization animation - subtle fade in */
+/* Particle effects container */
+.nvd-logo-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.nvd-particle {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+}
+
+/* Logo glint effect */
+.nvd-logo-glint {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: linear-gradient(135deg, 
+                rgba(255,255,255,0) 0%, 
+                rgba(255,255,255,0) 45%, 
+                rgba(255,255,255,0.2) 50%, 
+                rgba(255,255,255,0) 55%, 
+                rgba(255,255,255,0) 100%);
+    background-size: 300% 300%;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nvd-logo-active .nvd-logo-glint {
+    opacity: 1;
+    animation: logoGlint 2s ease-in-out infinite;
+}
+
+/* Wiring elements - decorative lines */
+.nvd-logo-wiring {
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 0.5;
+    fill: none;
+    stroke-dasharray: 10;
+    stroke-dashoffset: 100;
+    transition: all 0.5s ease;
+}
+
+.nvd-logo-active .nvd-logo-wiring {
+    stroke-dashoffset: 0;
+}
+
+/* Data nodes */
+.nvd-logo-node {
+    fill: rgba(255, 255, 255, 0.5);
+    r: 1.5;
+    transition: all 0.4s cubic-bezier(0.17, 0.84, 0.44, 1);
+    opacity: 0.7;
+}
+
+.nvd-logo-active .nvd-logo-node {
+    r: 2.5;
+    opacity: 1;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+    animation: nodeGlow 2s ease-in-out infinite;
+}
+
+/* Logo initialization animation - enhanced */
 .nvd-logo-ready {
-    animation: logo-appear 0.6s ease forwards;
+    animation: logo-appear 1s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
 }
 
 @keyframes logo-appear {
     0% {
         opacity: 0;
-        transform: scale(0.95);
+        transform: scale(0.8) translateY(10px);
+    }
+    70% {
+        transform: scale(1.05) translateY(-5px);
     }
     100% {
         opacity: 1;
-        transform: scale(1);
+        transform: scale(1) translateY(0);
     }
+}
+
+@keyframes logoGlint {
+    0% { background-position: 200% 0%; }
+    100% { background-position: -200% 0%; }
+}
+
+@keyframes nodeGlow {
+    0% { filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7)); }
+    50% { filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
+    100% { filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.7)); }
+}
+
+@keyframes logoRotate {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
 }
 
 /* Responsive adjustments for sidebar */
 @media (max-width: 992px) {
     .nvd-logo-container {
-        height: 130px;
+        height: 160px;
     }
 }
 
 @media (max-width: 768px) {
     .nvd-logo-container {
-        height: 120px; /* Kleiner für mobile Ansicht */
+        height: 140px;
     }
 }
 
 @media (max-width: 576px) {
     .nvd-logo-container {
-        height: 110px;
+        height: 120px;
     }
 }
 
@@ -139,5 +238,9 @@
     .nvd-logo-container, .nvd-logo-active, .nvd-logo-ready {
         animation: none !important;
         transition: none !important;
+    }
+    
+    .nvd-logo-glint, .nvd-logo-node, .nvd-logo-data-line {
+        animation: none !important;
     }
 }
