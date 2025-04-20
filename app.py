@@ -378,6 +378,56 @@ def index():
 
     return render_template('index.html', results=results, search_term=search_term, search_performed=search_performed, severity=severity_filter, severity_counts=severity_counts, total_cve_count=total_cve_count, current_page=page, total_pages=total_pages if 'total_pages' in locals() else 1, total_results=total_results if 'total_results' in locals() else 0, exploitable=exploitable_only)
 
+@app.route('/search', methods=['GET', 'POST'])
+def search():
+    """Handle search requests from the search form"""
+    if request.method == 'POST':
+        # Process basic search
+        if 'search_term' in request.form and request.form['search_term'].strip():
+            search_term = request.form['search_term'].strip()
+            return redirect(url_for('index', search_term=search_term, search_performed='true'))
+        
+        # Process advanced search
+        search_params = {}
+        
+        # Handle keyword
+        if 'keyword' in request.form and request.form['keyword'].strip():
+            search_params['search_term'] = request.form['keyword'].strip()
+        
+        # Handle vendor
+        if 'vendor' in request.form and request.form['vendor'].strip():
+            search_params['vendor'] = request.form['vendor'].strip()
+        
+        # Handle severity
+        if 'severity' in request.form and request.form['severity']:
+            search_params['severity'] = request.form['severity']
+        
+        # Handle date range
+        if 'date_range' in request.form and request.form['date_range']:
+            search_params['date_range'] = request.form['date_range']
+        
+        # Handle options
+        if 'exploitable' in request.form:
+            search_params['exploitable'] = 'true'
+        
+        if 'has_patch' in request.form:
+            search_params['has_patch'] = 'true'
+        
+        # Add search_performed parameter
+        search_params['search_performed'] = 'true'
+        
+        # Log the search parameters for debugging
+        logging.info(f"Search parameters: {search_params}")
+        
+        return redirect(url_for('index', **search_params))
+    
+    # If it's a GET request, just show the search page
+    try:
+        return render_template('search.html')
+    except Exception as e:
+        logging.error(f"Error rendering search template: {e}")
+        return render_template('error.html', error_message=f"An error occurred: {str(e)}")
+
 @app.route('/view_all')
 def view_all_entries():
     """Display all CVEs in the database, with sorting options"""
