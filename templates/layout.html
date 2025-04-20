@@ -56,21 +56,21 @@
             height: auto; 
             margin-bottom: 15px; 
             padding: 5px; /* Reduced padding */
-            /* Updated transition for smoother effects */
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
-                        filter 0.4s ease-out, 
-                        box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            /* Updated transition for cleaner hover effect */
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             /* Use a fade-in scale animation */
             animation: logoFadeInScale 0.7s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
             opacity: 0; 
             animation-delay: 0.1s; 
-            border-radius: 4px; /* Slightly rounded corners */
+            border-radius: 12px; /* Further increased border-radius */
+            border: 1px solid transparent; /* Add transparent border initially for smooth transition */
         }
         
         .logo-img:hover {
-            transform: scale(1.04); /* More subtle scale */
-            /* Refined shadow using accent color for a professional glow */
-            box-shadow: 0 4px 12px rgba(var(--accent-color-rgb, 13, 110, 253), 0.2);
+            transform: scale(1.03); /* Even more subtle scale */
+            /* Cleaner, softer shadow */
+            box-shadow: 0 4px 10px rgba(var(--accent-color-rgb, 13, 110, 253), 0.15); 
         }
         
         /* Sidebar Header improved styling */

@@ -534,8 +534,9 @@ def vulnerability_category(category_slug):
 
 @app.route('/monthly_summary')
 def monthly_summary():
-    """Displays a summary of CVEs published per month."""
+    """Displays a summary of CVEs published per month, including severity breakdown."""
     summary_data = {}
+    all_years_in_data = []
     try:
         engine = create_local_cve_db()
         session = get_session(engine)
@@ -543,33 +544,56 @@ def monthly_summary():
         if CVE_Model is None:
             return render_template('error.html', error_message="Database model not initialized.")
 
-        # Query to get counts grouped by year and month
-        monthly_counts = session.query(
+        # Query to get counts and severity breakdown grouped by year and month
+        monthly_severity_counts = session.query(
             extract('year', CVE_Model.published_date).label('year'),
             extract('month', CVE_Model.published_date).label('month'),
+            CVE_Model.severity,
             func.count(CVE_Model.id).label('count')
         ).filter(CVE_Model.published_date.isnot(None)) \
-         .group_by('year', 'month') \
+         .group_by('year', 'month', CVE_Model.severity) \
          .order_by(sa.desc('year'), sa.desc('month')) \
          .all()
 
-        # Process data into a nested dictionary {year: {month: count}}
-        for year, month, count in monthly_counts:
+        # Process data into the nested dictionary format required by the template
+        # { year: { month: { count: X, critical: Y, high: Z, medium: A, low: B, unknown: C } } }
+        for year, month, severity, count in monthly_severity_counts:
             if year not in summary_data:
                 summary_data[year] = {}
-            summary_data[year][month] = count
+                # Initialize all months for the year to ensure they exist
+                for m in range(1, 13):
+                    summary_data[year][m] = {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
 
-        # Example: Assume you get these values somehow
+            if month not in summary_data[year]:
+                 # This case should ideally not happen if initialized above, but as a safeguard
+                 summary_data[year][month] = {'count': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0, 'unknown': 0}
+
+            # Increment total count for the month
+            summary_data[year][month]['count'] += count
+
+            # Increment severity count
+            severity_key = (severity or 'unknown').lower()
+            if severity_key in summary_data[year][month]:
+                summary_data[year][month][severity_key] += count
+            else:
+                 # Handle unexpected severity values if necessary, though 'unknown' should catch most
+                 summary_data[year][month]['unknown'] += count
+
+
+        # Determine available years and selected year
         current_year = datetime.now().year
-        all_years_in_data = sorted(summary_data.keys(), reverse=True)  # Get years from your data
-        selected_year = request.args.get('year', default=current_year, type=int)
-        if not all_years_in_data:
-            all_years_in_data = [current_year]  # Default if no data
-            selected_year = current_year
-        elif selected_year not in all_years_in_data:
-            selected_year = all_years_in_data[0]  # Default to latest year if invalid year selected
+        all_years_in_data = sorted(summary_data.keys(), reverse=True)
+        selected_year = request.args.get('year', type=int) # Get year from query param
 
-        month_names_list = list(calendar.month_name)[1:]  # Get month names ["January", ..., "December"]
+        # If no year requested or requested year not in data, default to the latest year with data
+        if not all_years_in_data:
+             all_years_in_data = [current_year] # Default to current year if no data at all
+             selected_year = current_year
+        elif selected_year is None or selected_year not in all_years_in_data:
+             selected_year = all_years_in_data[0] # Default to the latest year found in data
+
+
+        month_names_list = list(calendar.month_name)[1:]  # ["January", ..., "December"]
 
     except Exception as e:
         logging.error(f"Error fetching monthly summary: {e}")
@@ -578,12 +602,13 @@ def monthly_summary():
         if 'session' in locals() and session:
             session.close()
 
+    # Pass the structured data to the template
     return render_template(
         'monthly_summary.html',
-        summary_data=summary_data,
-        years=all_years_in_data,         # Pass the list of years
-        selected_year=selected_year,     # Pass the selected year
-        month_names=month_names_list     # Pass the list of month names
+        summary_data=summary_data,         # Nested dict: {year: {month: {count: X, critical: Y, ...}}}
+        years=all_years_in_data,           # List of years with data
+        selected_year=selected_year,       # The year to display initially
+        month_names=month_names_list       # List of full month names
     )
 
 @app.route('/severity_distribution')
