@@ -40,6 +40,7 @@ python app.py
 
 Then open your browser and navigate to `http://localhost:8080`
 
+
 ### API Access
 The application provides RESTful API endpoints:
 
