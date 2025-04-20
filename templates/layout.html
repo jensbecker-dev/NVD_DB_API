@@ -232,7 +232,7 @@
         <h5 class="section-title"><i class="bi bi-bug me-2"></i>Vulnerability</h5>
         <div class="list-group list-group-flush">
             <a href="{{ url_for('vulnerability_category', category='sql-injection') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='sql-injection') %}active{% endif %}">
-                <i class="bi bi-database me-2"></i>SQL Injection
+                <i class="bi bi-file-earmark-code me-2"></i>SQL Injection
             </a>
             <a href="{{ url_for('vulnerability_category', category='remote-code-execution') }}" class="list-group-item list-group-item-action {% if request.path == url_for('vulnerability_category', category='remote-code-execution') %}active{% endif %}">
                 <i class="bi bi-code-slash me-2"></i>Remote Code Execution
@@ -385,3 +385,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+`
