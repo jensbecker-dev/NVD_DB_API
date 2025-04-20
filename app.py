@@ -590,6 +590,7 @@ def monthly_summary():
 def severity_distribution():
     """Displays the distribution of CVEs by severity level."""
     severity_counts = {}
+    severity_percents = {} # Initialize the dictionary
     try:
         engine = create_local_cve_db()
         session = get_session(engine)
@@ -610,6 +611,18 @@ def severity_distribution():
                  severity_map[s_upper] = count
         severity_counts = severity_map
 
+        # Calculate total CVE count
+        total_cve_count = sum(severity_counts.values())
+
+        # Calculate percentages
+        if total_cve_count > 0:
+            for severity, count in severity_counts.items():
+                severity_percents[severity] = round((count / total_cve_count) * 100, 2)
+        else:
+            # Handle case with no CVEs
+            for severity in severity_counts:
+                severity_percents[severity] = 0.0
+
     except Exception as e:
         logging.error(f"Error fetching severity distribution: {e}")
         return render_template('error.html', error_message="An error occurred while generating the severity distribution.")
@@ -617,19 +630,41 @@ def severity_distribution():
         if 'session' in locals() and session:
             session.close()
 
-    # Prepare data for Chart.js
+    # Prepare data for Chart.js (Overall Distribution Pie/Bar Chart)
     labels = list(severity_counts.keys())
     data = list(severity_counts.values())
-
-    # Pass data as JSON for easy use in JavaScript
     chart_data = json.dumps({
         'labels': labels,
         'data': data
     })
 
+    # Define years as an empty list to prevent template error (from previous fix)
+    years_for_template = []
+
+    # Define default empty lists for time-series data expected by the template
+    # TODO: Implement actual time-series data fetching if needed for charts
+    critical_series = []
+    high_series = []
+    medium_series = []
+    low_series = []
+    unknown_series = []
+
+    # Define default empty dict for CVSS ranges data expected by the template
+    # TODO: Implement actual CVSS range data fetching if needed for charts
+    cvss_ranges = {}
+
     return render_template('severity_distribution.html',
                            severity_counts=severity_counts,
-                           chart_data=chart_data)
+                           severity_percents=severity_percents, # Pass the percentages to the template
+                           chart_data=chart_data,
+                           years=years_for_template, # Pass an empty list for 'years'
+                           # Pass empty lists for time-series data
+                           critical_series=critical_series,
+                           high_series=high_series,
+                           medium_series=medium_series,
+                           low_series=low_series,
+                           unknown_series=unknown_series,
+                           cvss_ranges=cvss_ranges) # Pass empty dict for cvss_ranges
 
 @app.route('/update_database')
 def update_database():
